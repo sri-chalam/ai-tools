@@ -16,14 +16,22 @@ I want you to process the following YouTube video: $ARGUMENTS
 2. **Organize Content:**
    - Generate a logical title based on the video content.
    - Insert descriptive headings throughout the transcript to break up the text into readable sections.
+   - Use only the transcript text from the video and do not include information from other internet sources, other videos, or unrelated topic research.
+   - Use tables where appropriate to organize key points, steps, comparisons, definitions, or summaries.
+   - Use icons and visual markers to improve readability, such as bulbs for insights, memory markers for key takeaways, checkmarks for actions, stars for highlights, and arrows for flows.
+   - Make the document visually appealing and easy to scan with polished formatting, consistent spacing, and clear section structure.
+   - Apply visual formatting techniques like shaded table headers, bold callout lines, boxed summary sections, and consistent spacing so the document looks professional and readable.
+   - Define custom paragraph styles for speakers (bold, colored), timestamps (italic, smaller font), and transcript text (standard body font with line spacing).
+   - Use a professional color palette: dark green (e.g., #006400) for headings, beige (#F5F5DC) for table headers, red (#B22222) for highlights, ensuring accessibility with good contrast ratios (aim for 4.5:1 text-to-background).
+   - Add visual separators like horizontal rules, section breaks, or blockquotes for logical divisions in the transcript.
 3. **Generate Word Document:** Create a `.docx` file using a Python script with the following specifications:
    - **Filename:** Use the format `Title-Words-Here-YT-Transcript.docx` (words separated by dashes, each word starting with uppercase).
    - **Font:** Helvetica Neue (fallback to Helvetica or Arial if unavailable).
    - **Font Size:** 12pt for body text.
    - **Structure:** Professional headings (bolded and slightly larger).
    - **Colors:** All titles and section headings should use green color.
-   - **Highlights:** Identify important points in the content and make them bold with green color.
-   - **Footer:** Include a footer with "Page X of Y" pagination on each page, in green color.
+   - **Highlights:** Identify important points in the content and make them bold with brown color.
+   - **Footer:** Include a footer with "Page X of Y" pagination on each page, in brown color.
 4. **Final Step:** Provide a link to the generated file or confirm the path where it was saved.
 
 If you encounter a video without a transcript, please notify me immediately.
