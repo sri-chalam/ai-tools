@@ -11,8 +11,28 @@ disable-model-invocation: true
 
 I want you to process the following YouTube video: $ARGUMENTS
 
+### Prerequisites:
+- Python 3.7+
+- Install required dependencies: `pip install youtube-transcript-api python-docx`
+- Optional fallback dependencies: `pip install selenium webdriver-manager`
+- Optional video availability check: `pip install requests`
+- Optional browser fallback requires a local Chrome installation
+
+### Implementation:
+This skill uses the `scripts/youtube_transcript_to_docx.py` script which implements the following functionality:
+
+**Enhanced 403 Error Handling:**
+- **Retry Logic**: Automatically retries API calls up to 3 times with exponential backoff
+- **User-Agent Rotation**: Uses different Chrome browser user-agents to bypass simple blocking
+- **Video Availability Check**: Pre-validates video accessibility before extraction attempts
+- **Specific Error Handling**: Distinguishes between 403 (retry), 404 (unavailable), and other errors
+- **Browser Fallback Improvements**: Enhanced headless Chrome setup with anti-detection measures
+
 ### Your Task:
-1. **Fetch Transcript:** Use the `youtube-transcript-api` Python library to retrieve the transcript. If that fails (e.g., due to restrictions), use browser access to navigate to the video and extract the transcript from the transcript panel (click "..." → "Show transcript").
+1. **Fetch Transcript:** Use the `youtube-transcript-api` Python library to retrieve the transcript. If that fails (e.g., due to restrictions or a 403 response), optionally fall back to browser-based transcript extraction using Selenium and Chrome. If Selenium is unavailable, surface the failure clearly rather than silently dropping the transcript.
+
+> Strict transcript gate: after each extraction attempt, explicitly check that you have actual transcript text. If not, do not proceed to document generation. Try the next fallback, or stop with a clear failure. Never use web search results or external internet content as a substitute for the transcript.
+
 2. **Organize Content:**
    - Generate a logical title based on the video content.
    - Insert descriptive headings throughout the transcript to break up the text into readable sections.
@@ -33,5 +53,8 @@ I want you to process the following YouTube video: $ARGUMENTS
    - **Highlights:** Identify important points in the content and make them bold with brown color.
    - **Footer:** Include a footer with "Page X of Y" pagination on each page, in brown color.
 4. **Final Step:** Provide a link to the generated file or confirm the path where it was saved.
+
+### Usage:
+Run the script with: `python scripts/youtube_transcript_to_docx.py "https://www.youtube.com/watch?v=VIDEO_ID"`
 
 If you encounter a video without a transcript, please notify me immediately.

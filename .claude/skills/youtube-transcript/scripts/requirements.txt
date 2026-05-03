@@ -1,0 +1,5 @@
+youtube-transcript-api>=0.6.0
+python-docx>=0.8.11
+selenium>=4.0.0
+webdriver-manager>=4.0.0
+requests>=2.25.0
