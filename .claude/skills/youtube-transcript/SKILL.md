@@ -1,6 +1,6 @@
 ---
 name: youtube-transcript
-description: Downloads a YouTube transcript and formats it into a professional Word document.
+description: Downloads a YouTube transcript and formats it into a professional Word document. (Claude Desktop only)
 argument-hint: [YouTube URL]
 # Use the full YouTube URL (e.g., https://www.youtube.com/watch?v=...), not the shortened youtu.be link from "Share"
 # When true, this skill must be invoked manually with /youtube-transcript (Claude won't auto-trigger it)
@@ -10,6 +10,9 @@ disable-model-invocation: true
 # YouTube Transcript to Word Document
 
 I want you to process the following YouTube video: $ARGUMENTS
+
+### Environment:
+This skill is designed to work exclusively with **Claude Desktop**.
 
 ### Prerequisites:
 - Python 3.7+
