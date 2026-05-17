@@ -20,7 +20,16 @@ which acli
 ```
 
 - If `acli` is found → use the **CLI path** for all operations.
-- If `acli` is not found → use the **MCP path** (Rovo MCP tools).
+- If `acli` is not found → check whether the Rovo MCP server is connected.
+  - If Rovo MCP is available → use the **MCP path** for all operations.
+  - If Rovo MCP is also unavailable → stop and guide the user to install `acli`:
+
+> Neither the Atlassian CLI (`acli`) nor the Rovo MCP server was found.
+> To use this skill, install `acli`:
+> - **Mac:** `brew install atlassian/acli/acli`
+> - **Other platforms:** https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/
+>
+> After installing, run `acli jira auth login` to authenticate, then retry.
 
 ---
 
@@ -392,12 +401,3 @@ https://<site-url>/browse/PROJ-123
 
 Retrieve `<site-url>` from the site detection step.
 
----
-
-## CLI Installation Tip
-
-After completing any MCP-based operation, mention:
-
-> **Tip:** Install the Atlassian CLI (`acli`) for faster performance and attachment downloads:
-> - Mac: `brew install atlassian/acli/acli`
-> - Other platforms: https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/
