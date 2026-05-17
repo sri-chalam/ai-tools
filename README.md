@@ -1,37 +1,76 @@
-# AI Skills for Java & Cloud Development
+# AI Tools
 
-A collection of AI instruction skills for GitHub Copilot, designed to enforce best practices across Java, AWS, and Cloud-native development workflows.
+A collection of AI skills, organized by category. Most skills are model-agnostic and work with any AI agent; exceptions are noted in the table below.
 
-These skills are structured as GitHub Copilot Agent Skills — each skill lives in `.github/skills/` and is automatically activated by Copilot when working on relevant files.
+Skills are structured following the Claude Code skill format — each skill lives under `skills/` and is loaded automatically (or on demand) when invoked.
 
 ---
 
-## Available Skills
+## Skills
 
-### ✅ JUnit Best Practices
-**Location:** `.github/skills/junit-best-practices/`
-**Applies to:** `**/*Test.java`, `**/*Tests.java`, `**/*Spec.java`
+### Engineering
 
-Guides writing production-quality JUnit 5 unit tests in Java. Covers:
-- FIRST principles (Fast, Independent, Repeatable, Self-validating, Timely)
-- Given-When-Then (GWT) test structure
-- Descriptive test naming conventions
-- Mocking and faking strategies
-- Exception testing
-- Avoiding logic and shared mutable state in tests
+| Skill | Description | Works with | Status |
+|-------|-------------|------------|--------|
+| [jira-cli-mcp](skills/engineering/jira-cli-mcp/) | Interact with Jira and export issues to markdown. Uses CLI (token-efficient) with MCP fallback. | Any AI agent | ✅ Ready |
+
+### Misc
+
+| Skill | Description | Works with | Status |
+|-------|-------------|------------|--------|
+| [youtube-transcript](skills/misc/youtube-transcript/) | Fetch a YouTube transcript and produce a formatted Word document. | Claude Desktop | ✅ Ready |
+
+### In Progress
+
+| Skill | Description | Works with | Status |
+|-------|-------------|------------|--------|
+| [junit-best-practices](skills/in-progress/junit-best-practices/) | JUnit 5 test best practices for Java: FIRST principles, GWT structure, naming, mocking. | Any AI agent | 🚧 In Progress |
 
 ---
 
 ## Repository Structure
 
 ```
-.
-├── .github/
-│   ├── copilot-instructions.md       # Top-level Copilot pointer
-│   └── skills/
-│       └── junit-best-practices/
-│           ├── skill.md
-│           ├── instructions.md
-│           └── scripts/
-└── README.md
+skills/
+├── engineering/
+│   └── jira-cli-mcp/       # Jira CLI + MCP skill
+├── misc/
+│   └── youtube-transcript/ # YouTube transcript → Word doc skill
+└── in-progress/
+    └── junit-best-practices/ # JUnit 5 best practices (WIP)
 ```
+
+---
+
+## How to Use a Skill
+
+Instead of copying skill files, use a symbolic link so updates are picked up with a simple `git pull`.
+
+**Step 1: Clone this repository**
+
+```bash
+git clone https://github.com/sri-chalam/ai-tools.git
+```
+
+**Step 2: Link the skill you want**
+
+```bash
+# Example: Jira CLI MCP skill
+ln -s /path/to/ai-tools/skills/engineering/jira-cli-mcp ~/.claude/skills/jira-cli-mcp
+
+# Example: YouTube Transcript skill
+ln -s /path/to/ai-tools/skills/misc/youtube-transcript ~/.claude/skills/youtube-transcript
+```
+
+**Step 3: Restart your AI agent** (e.g., reload VS Code) to pick up the new skill.
+
+**Updating**
+
+```bash
+cd /path/to/ai-tools
+git pull
+```
+
+Then restart your AI agent. No re-linking required.
+
+See each skill's `README.md` for setup details and usage instructions.
