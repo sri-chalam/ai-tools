@@ -2,7 +2,7 @@
 name: jira-cli-mcp
 description: Interact with Jira — view, list, create, transition, assign, comment, and export issues to markdown. Uses acli (Atlassian CLI) when available, falls back to Atlassian Rovo MCP.
 argument-hint: "[ISSUE-KEY | natural language command]"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Jira Skill
