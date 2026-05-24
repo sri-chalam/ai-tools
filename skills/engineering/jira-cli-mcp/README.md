@@ -51,6 +51,40 @@ Then restart your AI agent (e.g., restart VS Code) to use the updated skill.
 
 ---
 
+## Pre-Approving acli Commands
+
+### VS Code Copilot
+
+Approving every `acli jira workitem` command invocation in VS Code Copilot is tedious. Auto-approval can be configured by adding the following entry to your VS Code `settings.json` (`~/Library/Application Support/Code/User/settings.json` on macOS):
+
+```json
+"chat.tools.terminal.autoApprove": {
+  // Auto-approve all acli jira workitem commands
+  "/^acli jira workitem\\b/": {
+    "matchCommandLine": true,
+    "approve": true
+  }
+}
+```
+
+This uses a regex pattern to match any terminal command starting with `acli jira workitem` and approves it automatically, skipping the confirmation prompt for every Jira operation.
+
+---
+
+## Known Limitations
+
+### Claude Code: acli / gh CLI commands that use Keychain OAuth Not Supported
+
+Claude Code currently has a limitation where CLI commands that rely on OAuth tokens stored in the macOS Keychain do not work. This affects both `acli` and `gh` (GitHub CLI), as both use the macOS Keychain for authentication. The same limitation applies to the VS Code Claude plugin.
+
+This means the CLI path of this skill is not available when using Claude Code or the VS Code Claude plugin on macOS.
+
+A GitHub issue has been filed with Anthropic: [github.com/anthropics/claude-code/issues/61895](https://github.com/anthropics/claude-code/issues/61895)
+
+VS Code Copilot does not have this limitation — `acli` and other Keychain-backed CLIs work as expected.
+
+---
+
 ## Why This Skill?
 
 ### The Problem with MCP Token Consumption
