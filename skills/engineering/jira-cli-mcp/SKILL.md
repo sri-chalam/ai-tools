@@ -13,16 +13,11 @@ The user has invoked this skill with: $ARGUMENTS
 
 ## Step 1: Detect Environment
 
-Run the following to check if the Atlassian CLI is available:
+Do **not** run a separate detection command. Instead, attempt the `acli` command directly for the intended operation:
 
-```bash
-which acli
-```
-
-- If `acli` is found → use the **CLI path** for all operations.
-- If `acli` is not found → check whether the Rovo MCP server is connected.
-  - If Rovo MCP is available → use the **MCP path** for all operations.
-  - If Rovo MCP is also unavailable → stop and guide the user to install `acli`:
+- If it succeeds → continue on the **CLI path**.
+- If it fails with "command not found" → check whether the Rovo MCP server is connected and use the **MCP path**.
+- If Rovo MCP is also unavailable → stop and guide the user to install `acli`:
 
 > Neither the Atlassian CLI (`acli`) nor the Rovo MCP server was found.
 > To use this skill, install `acli`:
@@ -128,7 +123,7 @@ If a field has no value, omit it from the table. If there are no attachments or 
 ### List My Issues
 
 ```bash
-acli jira workitem search --jql "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC" --json
+acli jira workitem search --jql "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"
 ```
 
 Display results as a formatted table in the response.
@@ -138,7 +133,7 @@ Display results as a formatted table in the response.
 ### My In-Progress Issues
 
 ```bash
-acli jira workitem search --jql "assignee = currentUser() AND status = 'In Progress' ORDER BY updated DESC" --json
+acli jira workitem search --jql "assignee = currentUser() AND status = 'In Progress' ORDER BY updated DESC"
 ```
 
 ---
@@ -146,7 +141,7 @@ acli jira workitem search --jql "assignee = currentUser() AND status = 'In Progr
 ### Active Sprint Issues
 
 ```bash
-acli jira workitem search --jql "sprint in openSprints() AND assignee = currentUser() ORDER BY updated DESC" --json
+acli jira workitem search --jql "sprint in openSprints() AND assignee = currentUser() ORDER BY updated DESC"
 ```
 
 ---
