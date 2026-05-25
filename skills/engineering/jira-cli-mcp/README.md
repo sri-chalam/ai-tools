@@ -51,6 +51,43 @@ Then restart your AI agent (e.g., restart VS Code) to use the updated skill.
 
 ---
 
+## Adding the Atlassian MCP Server
+
+The MCP fallback path of this skill requires the Atlassian Rovo MCP server to be configured in the AI agent. Below are setup instructions for Claude Code and VS Code Copilot.
+
+### Claude Code
+
+Add the Atlassian MCP server at the user level so it is available across all projects:
+
+```bash
+claude mcp add --transport sse --scope user atlassian https://mcp.atlassian.com/v1/sse
+```
+
+> **Important:** The Atlassian MCP server can also be added through Claude Desktop via **Customize → Connectors → search for "Atlassian Rovo MCP"**. However, MCP servers added through Claude Desktop are only available within the Claude Desktop app — they are **not** shared with Claude Code or the VS Code Claude extension. Use the `claude mcp add` command above for Claude Code.
+
+### VS Code Copilot
+
+Add the Atlassian MCP server to your VS Code user settings (`~/Library/Application Support/Code/User/settings.json` on macOS) so it is available across all workspaces:
+
+```json
+"mcp": {
+  "servers": {
+    "atlassian": {
+      "type": "sse",
+      "url": "https://mcp.atlassian.com/v1/sse"
+    }
+  }
+}
+```
+
+Alternatively, add it to a `.vscode/mcp.json` file in a specific project to limit the scope to that workspace.
+
+After saving, restart VS Code or reload the window (`Cmd+Shift+P` → **Developer: Reload Window**) for the MCP server to take effect.
+
+> **Important:** The SSE endpoint `https://mcp.atlassian.com/v1/sse` (transport: `sse`) is deprecated by Atlassian and will stop working after **June 30, 2026**. The replacement endpoint is `https://mcp.atlassian.com/v1/mcp` (transport: `http`). However, organizations must approve the new URL before it can be used. Check with your Atlassian admin if the new endpoint is available.
+
+---
+
 ## Pre-Approving acli Commands
 
 ### VS Code Copilot
@@ -210,7 +247,7 @@ Assign the Jira issue PROJ-123 to me
 /jira-cli-mcp PROJ-123 unassign issue
 /jira-cli-mcp PROJ-123 unassign
 /jira-cli-mcp PROJ-123 remove assignee
-Unassign the Jira issue PROJ-123 to me
+Unassign the Jira issue PROJ-123 from me
 ```
 
 ### Add Comment
@@ -221,8 +258,8 @@ Add a comment to the Jira issue PROJ-123 with the text "Test comment added using
 
 ### Open in Browser
 ```
-/jira-cli-mcp PROJ-123 open in browser
-Open Jira issue ACAT-4184 in.a browser.
+/jira-cli-mcp PROJ-123 open in a 1browser
+Open Jira issue PROJ-123 in a browser.
 ```
 
 ---

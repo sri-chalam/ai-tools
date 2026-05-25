@@ -13,23 +13,38 @@ The user has invoked this skill with: $ARGUMENTS
 
 ## Step 1: Detect Environment
 
-Run the following to check if the Atlassian CLI is available:
+**Gate 1 — Is `acli` installed?**
 
 ```bash
 which acli
 ```
 
-- If `acli` is found → use the **CLI path** for all operations.
-- If `acli` is not found → check whether the Rovo MCP server is connected.
-  - If Rovo MCP is available → use the **MCP path** for all operations.
-  - If Rovo MCP is also unavailable → stop and guide the user to install `acli`:
+If `acli` is not found, skip to Gate 3.
 
-> Neither the Atlassian CLI (`acli`) nor the Rovo MCP server was found.
-> To use this skill, install `acli`:
+**Gate 2 — Is `acli` authenticated?**
+
+```bash
+acli jira workitem search --jql "key = FAKE-0" --json > /dev/null 2>&1; echo $?
+```
+
+- Exit code `0` → `acli` is installed and authenticated → use the **CLI path** for all operations.
+- Any other exit code (auth error, network error, etc.) → `acli` is not usable → skip to Gate 3.
+
+**Gate 3 — Is Rovo MCP available?**
+
+- If Rovo MCP is connected → use the **MCP path** for all operations.
+- If Rovo MCP is also unavailable → stop and guide the user:
+
+> Neither the Atlassian CLI (`acli`) nor the Rovo MCP server is available.
+>
+> To fix `acli` authentication, run:
+> ```bash
+> acli jira auth login
+> ```
+>
+> To install `acli` from scratch:
 > - **Mac:** `brew install atlassian/acli/acli`
 > - **Other platforms:** https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/
->
-> After installing, run `acli jira auth login` to authenticate, then retry.
 
 ---
 
@@ -340,7 +355,7 @@ acli jira workitem view PROJ-123 --web
 
 ## MCP Path (Rovo MCP fallback)
 
-Used when `acli` is not installed.
+Used when `acli` is not installed or not authenticated.
 
 ### Site Detection
 
