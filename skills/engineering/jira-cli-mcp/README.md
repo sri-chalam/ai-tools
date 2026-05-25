@@ -220,10 +220,16 @@ List Jira issues of current sprint
 ```
 
 ### Create Issue
+
+> **Note:** Every organization customizes Jira issue creation to suit their needs — required fields, epics, sprints, and other details vary significantly. It may not be advisable to create Jira issues through this generic skill. In a workflow that implements code from requirements, there may be a step to create multiple Jira issues from those requirements; however, issue creation should have its own organization-specific skill, customized to match the project's field requirements and workflows.
+
 ```
+create a new Jira issue under project PROJ, with summary: "my summary", description: "issue description", acceptance criteria: "list of criteria", take epic link from issue PROJ-123, status: Submitted, type: bug
+
 /jira-cli-mcp create a bug in PROJ
 /jira-cli-mcp new task in PROJ
 /jira-cli-mcp create story in PROJ
+
 ```
 
 ### Transition Issue
