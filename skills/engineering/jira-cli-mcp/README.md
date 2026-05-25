@@ -15,7 +15,7 @@ This skill helps AI agents interact with Jira for common tasks such as viewing i
 - CLI path requires `acli`, `jq`, and `python3`; MCP path requires no local tools — see [Requirements](#requirements)
 
 **Key Terms:**
-- **CLI (Command Line Interface)** - An executable program that runs in the terminal to interact with Jira in the cloud. It needs to be installed on your computer.
+- **CLI (Command Line Interface)** - An executable program that runs in the terminal, such as `git`, `gh`, or `acli`. It needs to be installed on your computer.
 - **MCP (Model Context Protocol)** - A protocol that allows AI agents to interact with external services like Jira without needing local installations. It runs as a server that the AI connects to.
 
 ---
@@ -29,8 +29,8 @@ In 2025, MCP (Model Context Protocol) servers gained quite a following in the AI
 Toward the end of 2025, however, concerns began to be raised about the number of tokens consumed by MCP servers. It was noticed that even when MCP tools are not actively being used in a session, the descriptions of all tools provided by each configured MCP server are pre-loaded by the model. Tokens are spent just by having an MCP server connected.
 
 Some observed token costs for popular MCP servers:
-- **GitHub MCP server**: approximately 55,000 tokens
-- **Atlassian Rovo MCP server**: approximately 12,000 tokens
+- **Official GitHub MCP server**: approximately 17,600 tokens for 94 tools (some sources report up to ~55,000 tokens)
+- **Atlassian Rovo MCP server**: approximately 10,000 tokens
 
 As awareness of these numbers grew, CLI-based AI skills started to be recommended as a more token-efficient alternative.
 
@@ -44,7 +44,7 @@ Both approaches have their place, depending on the context — who is using the 
 - **MCP servers** do not require any additional software to be installed locally, which is a meaningful advantage for non-engineering teams.
   - If AI models are not being used heavily — for example, if a team only occasionally asks a question or two — token consumption may not be a pressing concern. In that case, using MCP is perfectly fine, even if it consumes more tokens per session.
 
-A clear example is **GitHub**: it is primarily used by developers, who almost always have `git` installed. Using a GitHub MCP server that consumes 55,000 tokens is likely not the best choice for developers — a CLI-based approach would be more efficient. For GitHub, the choice is fairly straightforward: CLI is preferred.
+A clear example is **GitHub**: it is primarily used by developers, who almost always have `git` installed. Using a GitHub MCP server that consumes 17,700 tokens is likely not the best choice for developers — a CLI-based approach would be more efficient. For GitHub, the choice is fairly straightforward: CLI is preferred.
 
 **Atlassian Jira** is a different case. It is used by both engineering and non-engineering teams. For non-engineering teams, installing CLI tools along with dependencies like `jq` or Python can be difficult. This makes MCP more appealing for those users, even with its token cost.
 
@@ -56,7 +56,7 @@ Frontier AI models may advertise context windows of up to 1 million tokens. Howe
 
 It is generally suggested to stay within **120,000 tokens** to remain in the smart zone with current frontier models.
 
-If both GitHub MCP and Atlassian MCP servers are configured, they together consume approximately **65,000 tokens** — about **50% of the smart zone budget** — before any actual task context, conversation history, or code is added.
+If both GitHub MCP and Atlassian MCP servers are configured, they together consume approximately **28,000 tokens** — about **25% of the smart zone budget** spent on just two MCP servers, before any actual task context, conversation history, or code is added.
 
 For Atlassian Jira specifically, having an AI skill that supports both CLI (for engineering teams) and MCP as a fallback (for non-engineering teams) helps keep this token footprint in check while still being accessible to everyone.
 
@@ -80,19 +80,23 @@ There is a popular third-party CLI called `jira-cli` that many developers use. H
 
 This skill was created because existing options did not fully meet the needs of AI coding workflows.
 
-### Inspiration and Improvements
+### MCP Compression (mcp-compressor)
 
-The idea for this AI skill comes from [aitmpl.com/component/skill/ai-research/jira](https://aitmpl.com/component/skill/ai-research/jira). The following improvements have been made:
+Atlassian's [mcp-compressor](https://github.com/atlassian-labs/mcp-compressor) is a proxy that wraps an MCP server and reduces token usage by 70–97% by fetching tool schemas on demand rather than pre-loading all of them. However, it requires `uvx` (a Python package runner) to be installed — which is still an additional dependency, particularly for non-engineering teams.
 
-1. **Packaged as an AI Skill** - The source is a set of instructions, not a ready-to-use and progressively loaded AI skill.
+### Jira AI Skill (aitmpl.com)
 
-2. **Uses Official Atlassian CLI** - The source uses `jira-cli` from a personal GitHub repository. This skill uses the official Atlassian CLI, which offers better security and long-term support.
+[aitmpl.com](https://aitmpl.com/component/skill/ai-research/jira) offers a Jira AI skill, but it has several limitations that make it insufficient for AI coding workflows:
 
-3. **OAuth Authentication** - The official CLI supports OAuth-based authentication instead of storing tokens in files like `.zshrc`.
+1. **Not a packaged skill** - It is a raw set of instructions, not a ready-to-use, progressively loaded AI skill.
 
-4. **Markdown Export for Workflows** - The primary focus is creating markdown files from Jira issues for use in AI coding workflows.
+2. **Uses an unofficial CLI** - It relies on `jira-cli` from a personal GitHub repository, which raises concerns about long-term support and security.
 
-5. **Minimal CLI Dependencies** - The CLI path relies only on standard tools (`jq` and `python3`); the MCP path requires no local tools at all. See [Requirements](#requirements).
+3. **No OAuth support** - Authentication depends on storing tokens in files like `.zshrc`, rather than using OAuth.
+
+4. **No markdown export** - It does not support exporting Jira issues to markdown files for use in AI coding workflows.
+
+5. **Heavy dependencies** - It does not distinguish between CLI and MCP paths, offering no lightweight fallback for non-engineering teams.
 
 ---
 
@@ -331,3 +335,9 @@ Open Jira issue PROJ-123 in a browser.
 
 - Original idea: [aitmpl.com/component/skill/ai-research/jira](https://aitmpl.com/component/skill/ai-research/jira)
 - [clawhub.ai/peetzweg/atlassian-cli](https://clawhub.ai/peetzweg/atlassian-cli) - Supports only CLI (not MCP) and does not support creating markdown files from issues.
+
+---
+
+## References
+
+- [MCP Compression: Preventing Tool Bloat in AI Agents](https://www.atlassian.com/blog/developer/mcp-compression-preventing-tool-bloat-in-ai-agents) - Atlassian Developer Blog
