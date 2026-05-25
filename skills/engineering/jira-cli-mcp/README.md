@@ -8,7 +8,7 @@ This skill helps AI agents interact with Jira for common tasks such as viewing i
 
 **Key Features:**
 - Interact with Jira: view issues, list issues, check in-progress work, create issues, and more
-- **Fetches Jira issues and converts them to markdown file**
+- **Fetches Jira issues and converts them to a markdown file**
 - Uses CLI first for lower token consumption, falls back to MCP if CLI is unavailable
 - Works with the official Atlassian CLI for better security and long-term support
 - Uses OAuth for authentication - no need to store API keys locally
@@ -125,9 +125,23 @@ See [Adding the Atlassian MCP Server](#adding-the-atlassian-mcp-server) for setu
 
 ---
 
+## Known Limitations
+
+### Claude Code: acli / gh CLI Commands That Use Keychain OAuth Not Supported
+
+Claude Code currently has a limitation where CLI commands that rely on OAuth tokens stored in the macOS Keychain do not work. This affects both `acli` and `gh` (GitHub CLI), as both use the macOS Keychain for authentication. The same limitation applies to the VS Code Claude plugin.
+
+This means the CLI path of this skill is not available when using Claude Code or the VS Code Claude plugin on macOS.
+
+A GitHub issue has been filed with Anthropic: [github.com/anthropics/claude-code/issues/61895](https://github.com/anthropics/claude-code/issues/61895)
+
+VS Code Copilot does not have this limitation — `acli` and other Keychain-backed CLIs work as expected.
+
+---
+
 ## How to Use
 
-Instead of copying the skill files to your Claude skills directory or Git repo, it is recommended using a symbolic link. This way, when the skill is updated, you can simply pull the latest changes without copying files again.
+Instead of copying the skill files to your Claude skills directory or Git repo, it is recommended to use a symbolic link. This way, when the skill is updated, you can simply pull the latest changes without copying files again.
 
 **Step 1: Clone the repository**
 
@@ -138,7 +152,7 @@ git clone https://github.com/sri-chalam/ai-tools.git
 **Step 2: Create a symbolic link**
 
 ```bash
-ln -s /path/to/ai-tools/skills/jira-cli-mcp ~/.claude/skills/jira-cli-mcp
+ln -s /path/to/ai-tools/skills/engineering/jira-cli-mcp ~/.claude/skills/jira-cli-mcp
 ```
 
 Replace `/path/to/ai-tools` with the actual path where you cloned the repository.
@@ -213,28 +227,6 @@ This uses a regex pattern to match any terminal command starting with `acli jira
 
 ---
 
-## Known Limitations
-
-### Claude Code: acli / gh CLI commands that use Keychain OAuth Not Supported
-
-Claude Code currently has a limitation where CLI commands that rely on OAuth tokens stored in the macOS Keychain do not work. This affects both `acli` and `gh` (GitHub CLI), as both use the macOS Keychain for authentication. The same limitation applies to the VS Code Claude plugin.
-
-This means the CLI path of this skill is not available when using Claude Code or the VS Code Claude plugin on macOS.
-
-A GitHub issue has been filed with Anthropic: [github.com/anthropics/claude-code/issues/61895](https://github.com/anthropics/claude-code/issues/61895)
-
-VS Code Copilot does not have this limitation — `acli` and other Keychain-backed CLIs work as expected.
-
----
-
-## Looking Ahead
-
-As AI skills become more common, vendors who previously released MCP servers are now creating CLI wrappers to reduce token usage. Atlassian may eventually release an official AI skill that wraps their CLI.
-
-Even then, this skill offers the additional feature of converting Jira issues into markdown files, which remains useful for automated workflows.
-
----
-
 ## Example Skill Usage
 
 > **Tip:** Using the explicit `/jira-cli-mcp` prefix is the most reliable way to invoke this skill. If you prefer free-form prompts without the prefix, include the word **"Jira"** to avoid ambiguity — issue key patterns like `PROJ-123` are not unique to Jira and the model may not load the correct skill without that context.
@@ -285,8 +277,10 @@ List Jira issues of current sprint
 > **Note:** Every organization customizes Jira issue creation to suit their needs — required fields, epics, sprints, and other details vary significantly. It may not be advisable to create Jira issues through this generic skill. In a workflow that implements code from requirements, there may be a step to create multiple Jira issues from those requirements; however, issue creation should have its own organization-specific skill, customized to match the project's field requirements and workflows.
 
 ```
+# Full natural-language example
 create a new Jira issue under project PROJ, with summary: "my summary", description: "issue description", acceptance criteria: "list of criteria", take epic link from issue PROJ-123, status: Submitted, type: bug
 
+# Or using the skill prefix:
 /jira-cli-mcp create a bug in PROJ
 /jira-cli-mcp new task in PROJ
 /jira-cli-mcp create story in PROJ
@@ -298,7 +292,7 @@ create a new Jira issue under project PROJ, with summary: "my summary", descript
 /jira-cli-mcp PROJ-123 Change the status to In Progress
 /jira-cli-mcp PROJ-123 move to Done
 /jira-cli-mcp PROJ-123 transition to In Review
-Change the status Jira issue PROJ-123 to Ready for Deploy.
+Change the status of Jira issue PROJ-123 to Ready for Deploy.
 ```
 
 ### Assign to Me
@@ -325,9 +319,16 @@ Add a comment to the Jira issue PROJ-123 with the text "Test comment added using
 
 ### Open in Browser
 ```
-/jira-cli-mcp PROJ-123 open in a 1browser
-Open Jira issue PROJ-123 in a browser.
+/jira-cli-mcp PROJ-123 open in a browser 
+Open Jira issue PROJ-123 in a browser
 ```
+---
+
+## Looking Ahead
+
+As AI skills become more common, vendors who previously released MCP servers are now creating CLI wrappers to reduce token usage. Atlassian may eventually release an official AI skill that wraps their CLI.
+
+Even then, this skill offers the additional feature of converting Jira issues into markdown files, which remains useful for automated workflows.
 
 ---
 
