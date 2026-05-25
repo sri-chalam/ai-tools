@@ -4,7 +4,7 @@ An AI skill to interact with Atlassian Jira and convert issues to markdown files
 
 ## Summary
 
-This skill helps AI agents interact with Jira for common tasks such as viewing issues, listing your issues, checking in-progress work, and creating issues. While it supports many Jira use cases, **one primary use is converting Jira issues into markdown files for automated workflows**. It uses a dual approach: CLI when available (for token efficiency), and MCP as a fallback (for non-engineering teams who may not have command-line tools installed). 
+This skill helps AI agents interact with Jira for common tasks such as viewing issues, listing your issues, checking in-progress work, changing issue status, and assigning or unassigning issues. While it supports many Jira use cases, **one primary use is converting Jira issues into markdown files for automated workflows**. It uses a dual approach: CLI when available (for token efficiency), and MCP as a fallback (for non-engineering teams who may not have command-line tools installed). 
 
 **Key Features:**
 - Interact with Jira: view issues, list issues, check in-progress work, create issues, and more
@@ -12,11 +12,112 @@ This skill helps AI agents interact with Jira for common tasks such as viewing i
 - Uses CLI first for lower token consumption, falls back to MCP if CLI is unavailable
 - Works with the official Atlassian CLI for better security and long-term support
 - Uses OAuth for authentication - no need to store API keys locally
-- No dependency on Python, Node.js, or other runtimes
+- CLI path requires `acli`, `jq`, and `python3`; MCP path requires no local tools — see [Requirements](#requirements)
 
 **Key Terms:**
 - **CLI (Command Line Interface)** - An executable program that runs in the terminal to interact with Jira in the cloud. It needs to be installed on your computer.
 - **MCP (Model Context Protocol)** - A protocol that allows AI agents to interact with external services like Jira without needing local installations. It runs as a server that the AI connects to.
+
+---
+
+## Why This Skill?
+
+### Background: MCP Servers and Token Consumption
+
+In 2025, MCP (Model Context Protocol) servers gained quite a following in the AI community. They offer a convenient way for AI agents to interact with external services without requiring any local software to be installed.
+
+Toward the end of 2025, however, concerns began to be raised about the number of tokens consumed by MCP servers. It was noticed that even when MCP tools are not actively being used in a session, the descriptions of all tools provided by each configured MCP server are pre-loaded by the model. Tokens are spent just by having an MCP server connected.
+
+Some observed token costs for popular MCP servers:
+- **GitHub MCP server**: approximately 55,000 tokens
+- **Atlassian Rovo MCP server**: approximately 12,000 tokens
+
+As awareness of these numbers grew, CLI-based AI skills started to be recommended as a more token-efficient alternative.
+
+### MCP vs CLI: Pros and Cons
+
+Both approaches have their place, depending on the context — who is using the tool, and how heavily AI models are being used.
+
+- **CLI-based AI skills** require the relevant command-line tools to be installed on the user's machine.
+  - For engineering teams, this is generally not a barrier — developers are accustomed to tools like `git`, `gh`, or `acli`.
+  - For non-engineering teams (such as product managers or business analysts), installing and maintaining CLI tools for each service can be a significant hurdle.
+- **MCP servers** do not require any additional software to be installed locally, which is a meaningful advantage for non-engineering teams.
+  - If AI models are not being used heavily — for example, if a team only occasionally asks a question or two — token consumption may not be a pressing concern. In that case, using MCP is perfectly fine, even if it consumes more tokens per session.
+
+A clear example is **GitHub**: it is primarily used by developers, who almost always have `git` installed. Using a GitHub MCP server that consumes 55,000 tokens is likely not the best choice for developers — a CLI-based approach would be more efficient. For GitHub, the choice is fairly straightforward: CLI is preferred.
+
+**Atlassian Jira** is a different case. It is used by both engineering and non-engineering teams. For non-engineering teams, installing CLI tools along with dependencies like `jq` or Python can be difficult. This makes MCP more appealing for those users, even with its token cost.
+
+### The Smart Zone and the Dumb Zone
+
+A useful concept here is the **"smart zone" and "dumb zone"**, as coined by Dexter Horthy.
+
+Frontier AI models may advertise context windows of up to 1 million tokens. However, not all of that space performs equally well. When the context is kept compact, models tend to respond more accurately — this region is called the **smart zone**. As the context grows too large, the model's attention can become diluted and response quality may drop — this is the **dumb zone**.
+
+It is generally suggested to stay within **120,000 tokens** to remain in the smart zone with current frontier models.
+
+If both GitHub MCP and Atlassian MCP servers are configured, they together consume approximately **65,000 tokens** — about **50% of the smart zone budget** — before any actual task context, conversation history, or code is added.
+
+For Atlassian Jira specifically, having an AI skill that supports both CLI (for engineering teams) and MCP as a fallback (for non-engineering teams) helps keep this token footprint in check while still being accessible to everyone.
+
+### Built for AI Coding Workflows
+
+When using AI coding agents to implement Jira issues, a common first step is to fetch the issue details and understand the requirements. This skill creates a markdown file from the Jira issue, which serves as the starting point for automated workflows.
+
+> **Note:** Using prompts to interact with Jira for routine tasks (browsing, transitions, comments) can be slower than using the Jira web UI directly. The strongest use case for this skill is exporting issues to markdown — AI models work best when requirements are available in a local markdown file rather than fetched live during a workflow.
+
+### Why Atlassian CLI (acli) Instead of jira-cli?
+
+There is a popular third-party CLI called `jira-cli` that many developers use. However, this skill uses the official Atlassian CLI (`acli`) for the following reasons:
+
+1. **OAuth-Based Security** - The Atlassian CLI supports OAuth-based authentication, so there is no need to save API keys or tokens on your local machine (such as in `.zshrc` or config files). This is more secure.
+
+2. **Long-Term Support** - Since `acli` is the official CLI from Atlassian, it will receive long-term support and updates. The third-party `jira-cli` is maintained by a single person, which may not be sustainable over time.
+
+---
+
+## Why Not Use Existing Solutions?
+
+This skill was created because existing options did not fully meet the needs of AI coding workflows.
+
+### Inspiration and Improvements
+
+The idea for this AI skill comes from [aitmpl.com/component/skill/ai-research/jira](https://aitmpl.com/component/skill/ai-research/jira). The following improvements have been made:
+
+1. **Packaged as an AI Skill** - The source is a set of instructions, not a ready-to-use and progressively loaded AI skill.
+
+2. **Uses Official Atlassian CLI** - The source uses `jira-cli` from a personal GitHub repository. This skill uses the official Atlassian CLI, which offers better security and long-term support.
+
+3. **OAuth Authentication** - The official CLI supports OAuth-based authentication instead of storing tokens in files like `.zshrc`.
+
+4. **Markdown Export for Workflows** - The primary focus is creating markdown files from Jira issues for use in AI coding workflows.
+
+5. **Minimal CLI Dependencies** - The CLI path relies only on standard tools (`jq` and `python3`); the MCP path requires no local tools at all. See [Requirements](#requirements).
+
+---
+
+## Requirements
+
+> **Note:** The installation commands in this document are written for **macOS**. Commands for other platforms may differ.
+
+### CLI Path
+
+To use the CLI path, the following tools need to be installed:
+
+- **`acli`** (Atlassian CLI) — the primary tool for interacting with Jira from the terminal.
+  - Install on macOS: `brew install atlassian/acli/acli`
+  - [Other platforms](https://developer.atlassian.com/cloud/acli/guides/how-to-get-started/)
+  - After installing, authenticate with: `acli jira auth login`
+- **`jq`** — used for JSON field extraction from Jira API responses.
+  - Install on macOS: `brew install jq`
+- **`python3`** — used to parse Atlassian Document Format (ADF), the structure Jira uses for descriptions and comments.
+  - Typically pre-installed on macOS.
+
+### MCP Path
+
+To use the MCP fallback path, the **Atlassian Rovo MCP server** needs to be configured in your AI agent. No additional software needs to be installed on your machine.
+
+See [Adding the Atlassian MCP Server](#adding-the-atlassian-mcp-server) for setup instructions.
 
 ---
 
@@ -119,50 +220,6 @@ This means the CLI path of this skill is not available when using Claude Code or
 A GitHub issue has been filed with Anthropic: [github.com/anthropics/claude-code/issues/61895](https://github.com/anthropics/claude-code/issues/61895)
 
 VS Code Copilot does not have this limitation — `acli` and other Keychain-backed CLIs work as expected.
-
----
-
-## Why This Skill?
-
-### The Problem with MCP Token Consumption
-
-MCP servers tend to consume more tokens during AI interactions. For engineering teams comfortable with command-line tools, using a CLI is more efficient. However, non-engineering teams like product managers may prefer MCP over installing CLI tools on their laptops.
-
-This skill bridges both needs by trying CLI first, then falling back to MCP if CLI is not found. If neither is available, it guides the user to install the CLI.
-
-### Built for AI Coding Workflows
-
-When using AI coding agents to implement Jira issues, a common first step is to fetch the issue details and understand the requirements. This skill creates a markdown file from the Jira issue, which serves as the starting point for automated workflows.
-
-> **Note:** Using prompts to interact with Jira for routine tasks (browsing, transitions, comments) can be slower than using the Jira web UI directly. The strongest use case for this skill is exporting issues to markdown — AI models work best when requirements are available in a local markdown file rather than fetched live during a workflow.
-
-### Why Atlassian CLI (acli) Instead of jira-cli?
-
-There is a popular third-party CLI called `jira-cli` that many developers use. However, this skill uses the official Atlassian CLI (`acli`) for the following reasons:
-
-1. **OAuth-Based Security** - The Atlassian CLI supports OAuth-based authentication, so there is no need to save API keys or tokens on your local machine (such as in `.zshrc` or config files). This is more secure.
-
-2. **Long-Term Support** - Since `acli` is the official CLI from Atlassian, it will receive long-term support and updates. The third-party `jira-cli` is maintained by a single person, which may not be sustainable over time.
-
----
-
-## Why Not Use Existing Solutions?
-
-This skill was created because existing options did not fully meet the needs of AI coding workflows.
-
-### Inspiration and Improvements
-
-The idea for this skill comes from [aitmpl.com/component/skill/ai-research/jira](https://aitmpl.com/component/skill/ai-research/jira). The following improvements have been made:
-
-1. **Packaged as an AI Skill** - The source is a set of instructions, not a ready-to-use and progressively loaded AI skill.
-
-2. **Uses Official Atlassian CLI** - The source uses `jira-cli` from a personal GitHub repository. This skill uses the official Atlassian CLI, which offers better security and long-term support.
-
-3. **OAuth Authentication** - The official CLI supports OAuth-based authentication instead of storing tokens in files like `.zshrc`.
-
-4. **Markdown Export for Workflows** - The primary focus is creating markdown files from Jira issues for use in AI coding workflows.
-
-5. **No Runtime Dependencies** - Works without Python, Node.js, or other runtimes.
 
 ---
 
