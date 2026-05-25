@@ -97,6 +97,8 @@ This skill bridges both needs by trying CLI first, then falling back to MCP if C
 
 When using AI coding agents to implement Jira issues, a common first step is to fetch the issue details and understand the requirements. This skill creates a markdown file from the Jira issue, which serves as the starting point for automated workflows.
 
+> **Note:** Using prompts to interact with Jira for routine tasks (browsing, transitions, comments) can be slower than using the Jira web UI directly. The strongest use case for this skill is exporting issues to markdown — AI models work best when requirements are available in a local markdown file rather than fetched live during a workflow.
+
 ### Why Atlassian CLI (acli) Instead of jira-cli?
 
 There is a popular third-party CLI called `jira-cli` that many developers use. However, this skill uses the official Atlassian CLI (`acli`) for the following reasons:
@@ -132,6 +134,96 @@ The idea for this skill comes from [aitmpl.com/component/skill/ai-research/jira]
 As AI skills become more common, vendors who previously released MCP servers are now creating CLI wrappers to reduce token usage. Atlassian may eventually release an official AI skill that wraps their CLI.
 
 Even then, this skill offers the additional feature of converting Jira issues into markdown files, which remains useful for automated workflows.
+
+---
+
+## Example Skill Usage
+
+> **Tip:** Using the explicit `/jira-cli-mcp` prefix is the most reliable way to invoke this skill. If you prefer free-form prompts without the prefix, include the word **"Jira"** to avoid ambiguity — issue key patterns like `PROJ-123` are not unique to Jira and the model may not load the correct skill without that context.
+
+### Export Issue to Markdown
+```
+/jira-cli-mcp PROJ-123 export to markdown
+Export Jira PROJ-123 to markdown
+```
+
+### View Issue
+```
+/jira-cli-mcp PROJ-123
+/jira-cli-mcp PROJ-123 show details
+/jira-cli-mcp PROJ-123 fetch issue
+/jira-cli-mcp PROJ-123 show description
+Jira PROJ-123 show details
+Jira PROJ-123 fetch issue
+Jira PROJ-123 show description of the issue
+```
+
+### List My Issues
+```
+/jira-cli-mcp list my issues
+/jira-cli-mcp what are my tickets
+/jira-cli-mcp my open issues
+List my Jira issues
+List my open Jira issues
+```
+
+### My In-Progress Issues
+```
+/jira-cli-mcp in progress
+/jira-cli-mcp what am I working on
+/jira-cli-mcp my in-progress tasks
+List my in progress Jira issues
+```
+
+### Active Sprint Issues
+```
+/jira-cli-mcp current sprint
+/jira-cli-mcp show sprint items
+List Jira issues of current sprint
+```
+
+### Create Issue
+```
+/jira-cli-mcp create a bug in PROJ
+/jira-cli-mcp new task in PROJ
+/jira-cli-mcp create story in PROJ
+```
+
+### Transition Issue
+```
+/jira-cli-mcp PROJ-123 Change the status to In Progress
+/jira-cli-mcp PROJ-123 move to Done
+/jira-cli-mcp PROJ-123 transition to In Review
+Change the status Jira issue PROJ-123 to Ready for Deploy.
+```
+
+### Assign to Me
+```
+/jira-cli-mcp PROJ-123 assign issue to me
+/jira-cli-mcp PROJ-123 assign to me
+/jira-cli-mcp PROJ-123 take this issue
+Assign the Jira issue PROJ-123 to me
+```
+
+### Unassign
+```
+/jira-cli-mcp PROJ-123 unassign issue
+/jira-cli-mcp PROJ-123 unassign
+/jira-cli-mcp PROJ-123 remove assignee
+Unassign the Jira issue PROJ-123 to me
+```
+
+### Add Comment
+```
+/jira-cli-mcp PROJ-123 add a comment with the text "Test comment added using AI Skill".
+Add a comment to the Jira issue PROJ-123 with the text "Test comment added using AI Skill". 
+```
+
+### Open in Browser
+```
+/jira-cli-mcp PROJ-123 open in browser
+Open Jira issue ACAT-4184 in.a browser.
+```
 
 ---
 

@@ -13,11 +13,16 @@ The user has invoked this skill with: $ARGUMENTS
 
 ## Step 1: Detect Environment
 
-Do **not** run a separate detection command. Instead, attempt the `acli` command directly for the intended operation:
+Run the following to check if the Atlassian CLI is available:
 
-- If it succeeds → continue on the **CLI path**.
-- If it fails with "command not found" → check whether the Rovo MCP server is connected and use the **MCP path**.
-- If Rovo MCP is also unavailable → stop and guide the user to install `acli`:
+```bash
+which acli
+```
+
+- If `acli` is found → use the **CLI path** for all operations.
+- If `acli` is not found → check whether the Rovo MCP server is connected.
+  - If Rovo MCP is available → use the **MCP path** for all operations.
+  - If Rovo MCP is also unavailable → stop and guide the user to install `acli`:
 
 > Neither the Atlassian CLI (`acli`) nor the Rovo MCP server was found.
 > To use this skill, install `acli`:
@@ -34,7 +39,8 @@ Parse `$ARGUMENTS` using natural language to identify what the user wants:
 
 | Intent | Example inputs |
 |---|---|
-| View / export issue to markdown | `PROJ-123`, `show PROJ-123`, `fetch PROJ-123`, `export PROJ-123` |
+| View issue | `PROJ-123`, `show PROJ-123`, `fetch PROJ-123`, `PROJ-123 show details` |
+| Export issue to markdown | `export PROJ-123`, `PROJ-123 export to markdown` |
 | List my issues | `list my issues`, `what are my tickets`, `my open issues` |
 | My in-progress issues | `in progress`, `what am I working on`, `my in-progress tasks` |
 | Active sprint issues | `sprint`, `current sprint`, `show sprint items` |
@@ -51,25 +57,111 @@ If intent is ambiguous or the argument is empty, ask the user what they would li
 
 ## CLI Path (acli available)
 
-### View / Export Issue to Markdown
+> **Important:** `acli` uses its own built-in interactive pager that **ignores** the `PAGER` environment variable. Setting `PAGER=cat` does not reliably suppress it. For any command that returns JSON output, redirect stdout to a temp file to bypass the pager:
+> ```bash
+> acli jira workitem view PROJ-123 --fields "*all" --json > /tmp/PROJ-123.json
+> ```
 
-When the user provides an issue key or asks to view/export an issue:
+> **JSON Parsing:** Use `jq` to extract simple fields (key, summary, status, etc.) — it is a single binary with no runtime dependency (`brew install jq`). For Jira's **Atlassian Document Format (ADF)** fields (description, comments), use Python as a fallback since ADF is deeply nested JSON that `jq` handles less cleanly. If neither tool is available, read the JSON file directly.
+
+### View Issue
+
+When the user provides an issue key or asks to view/show/fetch an issue:
 
 **1. Fetch the issue:**
 ```bash
-acli jira workitem view KEY-123 --fields "*all" --json
+acli jira workitem view PROJ-123 --fields "*all" --json > /tmp/PROJ-123.json
 ```
 
-**2. List attachments:**
+**2. Parse the issue JSON:**
+
+Use `jq` if available (preferred — lightweight, no runtime dependency):
 ```bash
-acli jira workitem attachment-list --key KEY-123 --json
+jq -r '
+  .key as $key | .fields |
+  ($key + ": " + .summary),
+  ("Type: " + .issuetype.name + " | Status: " + .status.name + " | Priority: " + (.priority.name // "")),
+  ("Assignee: " + ((.assignee // {displayName:"Unassigned"}).displayName) + " | Reporter: " + .reporter.displayName),
+  ("Sprint: " + ((((.customfield_10020 // []) | map(select(.state == "active")) | .[0]) // ((.customfield_10020 // []) | last) // {}) | .name // "")),
+  ("Story Points: " + ((.customfield_10016 // .customfield_10028 // "") | tostring)),
+  ("Labels: " + (.labels | join(", ")))
+' /tmp/PROJ-123.json
 ```
 
-**3. Ask the user for output paths:**
-- "Where should I save the markdown file? (default: `./KEY-123-orig-requirements.md`)"
-- "Where should I download attachments? (default: `./screenshots`)"
+For **description and comments** (Atlassian Document Format — deeply nested JSON), use Python:
+```bash
+python3 << 'EOF'
+import json
+
+def extract_text(node):
+    if isinstance(node, dict):
+        if node.get('type') == 'hardBreak':
+            return '\n'
+        return node.get('text', '') + ''.join(extract_text(c) for c in node.get('content', []))
+    if isinstance(node, list):
+        return ''.join(extract_text(n) for n in node)
+    return ''
+
+with open('/tmp/PROJ-123.json') as f:
+    data = json.load(f)
+
+fields = data['fields']
+print('Description:')
+print(extract_text(fields.get('description') or {}))
+
+comments = (fields.get('comment') or {}).get('comments', [])
+if comments:
+    print('\nComments:')
+    for c in comments:
+        author = (c.get('author') or {}).get('displayName', '')
+        print(f"  {author} — {c.get('created','')[:10]}")
+        print(f"  {extract_text(c.get('body') or {})}")
+EOF
+```
+
+**3. Display the issue details inline** in the chat using this structure:
+
+```
+PROJ-123: <Summary>
+
+Type: <issue type> | Status: <status> | Priority: <priority>
+Assignee: <assignee> | Reporter: <reporter>
+Sprint: <sprint name> | Story Points: <story points>
+Labels: <labels, comma-separated>
+
+Description:
+<description content>
+
+Comments:
+  <Author Name> — <date>
+  <comment body>
+```
+
+If a field has no value, omit it. If there are no comments, omit that section.
+
+---
+
+### Export Issue to Markdown
+
+When the user explicitly asks to export an issue to a markdown file:
+
+**1. Ask the user for output paths:**
+- "Where should I save the markdown file? (default: `./docs/requirements/PROJ-123-orig-requirements.md`)"
+- "Where should I download attachments? (default: `./docs/requirements/screenshots`)"
 
 Accept the user's input or proceed with defaults.
+
+**2. Fetch the issue:**
+```bash
+acli jira workitem view PROJ-123 --fields "*all" --json > /tmp/PROJ-123.json
+```
+
+Parse fields using the same `jq` + Python approach described in [View Issue](#view-issue) above. Use the extracted values when generating the markdown in step 5.
+
+**3. List attachments:**
+```bash
+acli jira workitem attachment-list --key PROJ-123 --json > /tmp/PROJ-123-attachments.json && cat /tmp/PROJ-123-attachments.json
+```
 
 **4. Download attachments:**
 
@@ -83,10 +175,10 @@ curl -L -o "./screenshots/<filename>" "<attachment-download-url>"
 
 If any attachment fails to download, note the failure and continue with the rest.
 
-**5. Generate the markdown file** at the chosen path using this structure:
+**5. Generate the markdown file and save it to the path chosen by the user in Step 1.** Use this structure:
 
 ```markdown
-# KEY-123: <Summary>
+# PROJ-123: <Summary>
 
 | Field | Value |
 |---|---|
@@ -123,7 +215,7 @@ If a field has no value, omit it from the table. If there are no attachments or 
 ### List My Issues
 
 ```bash
-acli jira workitem search --jql "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"
+acli jira workitem search --jql "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC" --json > /tmp/my-issues.json && cat /tmp/my-issues.json
 ```
 
 Display results as a formatted table in the response.
@@ -133,7 +225,7 @@ Display results as a formatted table in the response.
 ### My In-Progress Issues
 
 ```bash
-acli jira workitem search --jql "assignee = currentUser() AND status = 'In Progress' ORDER BY updated DESC"
+acli jira workitem search --jql "assignee = currentUser() AND status = 'In Progress' ORDER BY updated DESC" --json > /tmp/my-inprogress.json && cat /tmp/my-inprogress.json
 ```
 
 ---
@@ -141,7 +233,7 @@ acli jira workitem search --jql "assignee = currentUser() AND status = 'In Progr
 ### Active Sprint Issues
 
 ```bash
-acli jira workitem search --jql "sprint in openSprints() AND assignee = currentUser() ORDER BY updated DESC"
+acli jira workitem search --jql "sprint in openSprints() AND assignee = currentUser() ORDER BY updated DESC" --json > /tmp/sprint-issues.json && cat /tmp/sprint-issues.json
 ```
 
 ---
@@ -183,6 +275,8 @@ acli jira workitem create --project "PROJ" --type "Bug" --summary "Login page cr
 ```bash
 acli jira workitem transition --key "PROJ-123" --status "In Review" --yes
 ```
+
+**On failure:** Report the exact error message from the command output and stop. Do not fetch the issue, check available transitions, or run any additional commands.
 
 ---
 
@@ -240,6 +334,8 @@ acli jira workitem comment create --key "PROJ-123" --body "comment text here"
 acli jira workitem view PROJ-123 --web
 ```
 
+> Note: `--web` opens a browser and does not produce terminal output, so `PAGER=cat` is not needed here.
+
 ---
 
 ## MCP Path (Rovo MCP fallback)
@@ -255,17 +351,34 @@ Call `mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources` to get the
 
 ---
 
-### View / Export Issue to Markdown
+### View Issue
 
-**1. Fetch the issue:**
+When the user provides an issue key or asks to view/show/fetch an issue:
+
+**Fetch the issue:**
 ```
 mcp__claude_ai_Atlassian_Rovo__getJiraIssue(issueKey: "PROJ-123")
 ```
 
-**2. Ask the user for the output path:**
-- "Where should I save the markdown file? (default: `./PROJ-123-orig-requirements.md`)"
+**Display the issue details inline** in the chat using the same structure as the CLI path.
 
-**3. Generate the markdown file** using the same structure as the CLI path.
+---
+
+### Export Issue to Markdown
+
+When the user explicitly asks to export an issue to a markdown file:
+
+**1. Ask the user for the output path:**
+- "Where should I save the markdown file? (default: `./docs/requirements/PROJ-123-orig-requirements.md`)"
+
+Accept the user's input or proceed with the default.
+
+**2. Fetch the issue:**
+```
+mcp__claude_ai_Atlassian_Rovo__getJiraIssue(issueKey: "PROJ-123")
+```
+
+**3. Generate the markdown file and save it to the path chosen by the user in Step 1.** Use the same structure as the CLI path.
 
 **For the Attachments section**, list names only — download is not available via MCP:
 
