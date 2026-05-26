@@ -60,11 +60,21 @@ If both GitHub MCP and Atlassian MCP servers are configured, they together consu
 
 For Atlassian Jira specifically, having an AI skill that supports both CLI (for engineering teams) and MCP as a fallback (for non-engineering teams) helps keep this token footprint in check while still being accessible to everyone.
 
-### Built for AI Coding Workflows
+### Context Isolation as a Workflow Practice
 
-When using AI coding agents to implement Jira issues, a common first step is to fetch the issue details and understand the requirements. This skill creates a markdown file from the Jira issue, which serves as the starting point for automated workflows.
+Token overhead from tools is only part of the problem — the other part is how workflows are structured. In practice, many teams either run the entire workflow — fetch, clarify, design, implement, test — in one unbroken session, or loosely group a few phases together without a clean context reset between them. In both cases, context accumulates across what should be isolated steps — pushing the model deeper into the dumb zone and degrading response quality.
 
-> **Note:** Using prompts to interact with Jira for routine tasks (browsing, transitions, comments) can be slower than using the Jira web UI directly. The strongest use case for this skill is exporting issues to markdown — AI models work best when requirements are available in a local markdown file rather than fetched live during a workflow.
+The better approach, advocated by practitioners like Dex Horthy through methods like **QRSPI** (Query, Research, Design, Plan, Implement), is to treat each phase as a **contextually isolated unit**:
+
+1. **Get the Jira issue** — fetch and export it as a markdown file.
+2. **Clarify requirements** — start a fresh session, read the markdown, produce a refined requirements document.
+3. **Design the solution** — start a fresh session, read the requirements markdown, produce a design document.
+4. **Implement** — start a fresh session, read the design markdown, write the code.
+5. **Test** — start a fresh session, read the implementation context, validate — usually handled by sub-agents.
+
+Each step starts fresh, reads a compact markdown artifact from the previous step, and produces a new markdown artifact for the next. No step carries forward accumulated noise from prior phases. Each session stays in the smart zone by design.
+
+This is why exporting a Jira issue to a markdown file is not just a convenience — it is the **essential first step** that makes context isolation possible. Without it, you are forced to either re-fetch live from Jira in every session (fragile and slow) or keep one long session alive (dumb zone risk). The markdown file is the stable handoff point that enables the entire pattern.
 
 ### Why Atlassian CLI (acli) Instead of jira-cli?
 
@@ -82,7 +92,10 @@ This skill was created because existing options did not fully meet the needs of 
 
 ### MCP Compression (mcp-compressor)
 
-Atlassian's [mcp-compressor](https://github.com/atlassian-labs/mcp-compressor) is a proxy that wraps an MCP server and reduces token usage by 70–97% by fetching tool schemas on demand rather than pre-loading all of them. However, it requires `uvx` (a Python package runner) to be installed — which is still an additional dependency, particularly for non-engineering teams.
+Atlassian's [mcp-compressor](https://github.com/atlassian-labs/mcp-compressor) is a proxy that wraps an MCP server and reduces token usage by 70–97% by fetching tool schemas on demand rather than pre-loading all of them. However, it has two key limitations:
+
+- **No Jira-to-Markdown export** — It does not support exporting a Jira issue to a Markdown file, which is a critical first step in any workflow that implements a solution from a ticket.
+- **Additional dependency** — It requires `uvx` (a Python package runner) to be installed, which is still an extra dependency, particularly for non-engineering teams.
 
 ### Jira AI Skill (aitmpl.com)
 
