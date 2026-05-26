@@ -1,4 +1,4 @@
-# Jira CLI MCP Skill
+# Jira AI Skill: CLI-First, MCP-Fallback, Zero Stored API Keys
 
 An AI skill to interact with Atlassian Jira and convert issues to markdown files. Supports both CLI and MCP approaches.
 
@@ -344,5 +344,3 @@ Even then, this skill offers the additional feature of converting Jira issues in
 - [Improving Token Efficiency in GitHub Agentic Workflows](https://github.blog/ai-and-ml/github-copilot/improving-token-efficiency-in-github-agentic-workflows/) - GitHub's own engineering team confirms 10–15 KB of per-turn schema overhead per 40 tools, and recommends CLI (`gh`) over MCP for data-fetching.
 
 - [MCP Compression: Preventing Tool Bloat in AI Agents](https://www.atlassian.com/blog/developer/mcp-compression-preventing-tool-bloat-in-ai-agents) - Atlassian Developer Blog
-
-
