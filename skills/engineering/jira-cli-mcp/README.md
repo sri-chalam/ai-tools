@@ -6,6 +6,10 @@ An AI skill to interact with Atlassian Jira and convert issues to markdown files
 
 This skill helps AI agents interact with Jira for common tasks such as viewing issues, listing your issues, checking in-progress work, changing issue status, and assigning or unassigning issues. While it supports many Jira use cases, **one primary use is converting Jira issues into markdown files for automated workflows**. It uses a dual approach: CLI when available (for token efficiency), and MCP as a fallback (for non-engineering teams who may not have command-line tools installed). 
 
+**Key Terms:**
+- **CLI (Command Line Interface)** - An executable program that runs in the terminal, such as `git`, `gh`, or `acli`. It needs to be installed on your computer.
+- **MCP (Model Context Protocol)** - A protocol that allows AI agents to interact with external services like Jira without needing local installations. It runs as a server that the AI connects to.
+
 **Key Features:**
 - Interact with Jira: view issues, list issues, check in-progress work, create issues, and more
 - **Fetches Jira issues and converts them to a markdown file**
@@ -13,10 +17,6 @@ This skill helps AI agents interact with Jira for common tasks such as viewing i
 - Works with the official Atlassian CLI for better security and long-term support
 - Uses OAuth for authentication - no need to store API keys locally
 - CLI path requires `acli`, `jq`, and `python3`; MCP path requires no local tools — see [Requirements](#requirements)
-
-**Key Terms:**
-- **CLI (Command Line Interface)** - An executable program that runs in the terminal, such as `git`, `gh`, or `acli`. It needs to be installed on your computer.
-- **MCP (Model Context Protocol)** - A protocol that allows AI agents to interact with external services like Jira without needing local installations. It runs as a server that the AI connects to.
 
 ---
 
@@ -29,7 +29,7 @@ In 2025, MCP (Model Context Protocol) servers gained quite a following in the AI
 Toward the end of 2025, however, concerns began to be raised about the number of tokens consumed by MCP servers. It was noticed that even when MCP tools are not actively being used in a session, the descriptions of all tools provided by each configured MCP server are pre-loaded by the model. Tokens are spent just by having an MCP server connected.
 
 Some observed token costs for popular MCP servers:
-- **Official GitHub MCP server**: approximately 17,600 tokens for 94 tools (some sources report up to ~55,000 tokens)
+- **Official GitHub MCP server**: approximately 17,700 tokens for 94 tools (some sources report up to ~55,000 tokens)
 - **Atlassian Rovo MCP server**: approximately 10,000 tokens
 
 As awareness of these numbers grew, CLI-based AI skills started to be recommended as a more token-efficient alternative.
@@ -42,7 +42,7 @@ Both approaches have their place, depending on the context — who is using the 
   - For engineering teams, this is generally not a barrier — developers are accustomed to tools like `git`, `gh`, or `acli`.
   - For non-engineering teams (such as product managers or business analysts), installing and maintaining CLI tools for each service can be a significant hurdle.
 - **MCP servers** do not require any additional software to be installed locally, which is a meaningful advantage for non-engineering teams.
-  - If AI models are not being used heavily — for example, if a team only occasionally asks a question or two — token consumption may not be a pressing concern. In that case, using MCP is perfectly fine, even if it consumes more tokens per session.
+  - If AI models are not being used heavily — for example, if a team uses AI agents infrequently — token consumption may not be a pressing concern. In that case, using MCP is perfectly fine, even if it consumes more tokens per session.
 
 A clear example is **GitHub**: it is primarily used by developers, who almost always have `git` installed. Using a GitHub MCP server that consumes 17,700 tokens is likely not the best choice for developers — a CLI-based approach would be more efficient. For GitHub, the choice is fairly straightforward: CLI is preferred.
 
@@ -50,7 +50,7 @@ A clear example is **GitHub**: it is primarily used by developers, who almost al
 
 ### The Smart Zone and the Dumb Zone
 
-A useful concept here is the **"smart zone" and "dumb zone"**, as coined by Dexter Horthy.
+Dex Horthy — an active AI Engineer conference speaker known for coining the term **Context Engineering** — also introduced the **smart zone** and **dumb zone** concept to describe how context size affects the model's ability to focus and retrieve relevant information.
 
 Frontier AI models may advertise context windows of up to 1 million tokens. However, not all of that space performs equally well. When the context is kept compact, models tend to respond more accurately — this region is called the **smart zone**. As the context grows too large, the model's attention can become diluted and response quality may drop — this is the **dumb zone**.
 
@@ -133,7 +133,7 @@ Claude Code currently has a limitation where CLI commands that rely on OAuth tok
 
 This means the CLI path of this skill is not available when using Claude Code or the VS Code Claude plugin on macOS.
 
-A GitHub issue has been filed with Anthropic: [github.com/anthropics/claude-code/issues/61895](https://github.com/anthropics/claude-code/issues/61895)
+A GitHub issue has been filed with Anthropic: [anthropics/claude-code #61895](https://github.com/anthropics/claude-code/issues/61895)
 
 VS Code Copilot does not have this limitation — `acli` and other Keychain-backed CLIs work as expected.
 
@@ -141,7 +141,7 @@ VS Code Copilot does not have this limitation — `acli` and other Keychain-back
 
 ## How to Use
 
-Instead of copying the skill files to your Claude skills directory or Git repo, it is recommended to use a symbolic link. This way, when the skill is updated, you can simply pull the latest changes without copying files again.
+AI skills evolve continuously. Copying files into your skills directory freezes them at a point in time. Instead, clone the skill Git repository and create a symbolic link to it — the skill stays current whenever you pull the latest changes.
 
 **Step 1: Clone the repository**
 
@@ -229,7 +229,7 @@ This uses a regex pattern to match any terminal command starting with `acli jira
 
 ## Example Skill Usage
 
-> **Tip:** Using the explicit `/jira-cli-mcp` prefix is the most reliable way to invoke this skill. If you prefer free-form prompts without the prefix, include the word **"Jira"** to avoid ambiguity — issue key patterns like `PROJ-123` are not unique to Jira and the model may not load the correct skill without that context.
+> **Tip:** Using the explicit `/jira-cli-mcp` prefix is the recommended way to invoke this skill. If you prefer free-form prompts without the prefix, include the word **"Jira"** to avoid ambiguity — issue key patterns like `PROJ-123` are not unique to Jira and the model may not load the correct skill without that context.
 
 ### Export Issue to Markdown
 ```
@@ -324,7 +324,7 @@ Open Jira issue PROJ-123 in a browser
 ```
 ---
 
-## Looking Ahead
+## Continued Relevance
 
 As AI skills become more common, vendors who previously released MCP servers are now creating CLI wrappers to reduce token usage. Atlassian may eventually release an official AI skill that wraps their CLI.
 
@@ -341,4 +341,8 @@ Even then, this skill offers the additional feature of converting Jira issues in
 
 ## References
 
+- [Improving Token Efficiency in GitHub Agentic Workflows](https://github.blog/ai-and-ml/github-copilot/improving-token-efficiency-in-github-agentic-workflows/) - GitHub's own engineering team confirms 10–15 KB of per-turn schema overhead per 40 tools, and recommends CLI (`gh`) over MCP for data-fetching.
+
 - [MCP Compression: Preventing Tool Bloat in AI Agents](https://www.atlassian.com/blog/developer/mcp-compression-preventing-tool-bloat-in-ai-agents) - Atlassian Developer Blog
+
+
