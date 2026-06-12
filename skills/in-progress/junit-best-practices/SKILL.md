@@ -1,9 +1,10 @@
 ---
 name: JUnit Best Practices (Java)
 description: >
-  Activates JUnit 5 test best practices for Java projects. Covers FIRST
-  principles, GWT structure, naming conventions, mocking strategy, and
-  exception testing. Auto-applies to test source files.
+  TRIGGER — invoke before writing, modifying, fixing, or reviewing any
+  Java test. Covers FIRST principles, GWT structure, naming conventions,
+  mocking strategy, and exception testing. Auto-applies to test source
+  files via applyTo patterns.
 applyTo:
   - "src/test/**/*.java"
   - "**/*Test.java"
