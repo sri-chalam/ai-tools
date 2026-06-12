@@ -19,6 +19,14 @@ Write tests that are:
 - **Test observable behavior through public APIs, not implementation details** - When refactoring internal logic, well-written tests should remain stable because they verify outcomes rather than how those outcomes are achieved.
 - **Write tests that validate a specific behavior or outcome, not just exercise a method.** Each test should represent one complete scenario with a clear expected result.
 
+<!-- 
+The below guidelines may not be needed. Claude is trained on these.
+
+- **Keep methods short and focused.** Long methods that do multiple things are hard to unit test. Extract logical units into separate, named methods.
+- **Avoid `void` return types in business logic.** Methods that return values are directly assertable in tests. Prefer returning a result object over mutating state or producing side effects.
+- **Design for testability.** Before writing a method, ask: can I call this in isolation and verify its output? If not, refactor the method's boundaries until you can.
+-->
+
 ---
 
 ## Rule 1: General Test Guidelines
