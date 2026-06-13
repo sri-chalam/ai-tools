@@ -18,6 +18,12 @@ Write tests that are:
 - **Treat tests as specifications of required behavior** - Tests document what the system must do, forming a contract that persists across refactorings.
 - **Test observable behavior through public APIs, not implementation details** - When refactoring internal logic, well-written tests should remain stable because they verify outcomes rather than how those outcomes are achieved.
 - **Write tests that validate a specific behavior or outcome, not just exercise a method.** Each test should represent one complete scenario with a clear expected result.
+- **A test that cannot catch a real bug should not be written.** If a method contains no conditional logic, transformation, or error handling and only
+  forwards its arguments to a dependency, skip the test — it verifies Mockito wiring, not application behavior.
+
+- **Extract repeated test data to named constants**: Any identifier, code, or string used in more than one test method should be declared as a `public static final`
+  constant with a UUID-like value. This gives test data a semantic name and a single point of change.
+  
 
 <!-- 
 The below guidelines may not be needed. Claude is trained on these.
@@ -41,6 +47,28 @@ The below guidelines may not be needed. Claude is trained on these.
 - Test auto-generated code
 - Use conditionals, loops, or complex expressions in tests
 - Test method call sequences unless absolutely necessary for the specific scenario. Only verify interactions when the "how" matters
+- Test pure-delegation methods that only forward arguments to a dependency with no logic — see "A test that cannot catch a real bug should not be written"
+  in Core Testing Philosophy.
+
+**Example of a trivial delegation test to avoid**
+```java
+// Production code — pure delegation, no logic
+class ShippingService {
+    public Mono<ShippingRate> getRate(ShippingRequest request, String customerId) {
+        return client.getRate(request, customerId);
+    }
+}
+
+// ❌ ANTI-PATTERN: Proves only that Mockito returns what you told it to
+@Test
+void getRate_withValidRequest_returnsDelegatedRate() {
+    when(client.getRate(request, CUSTOMER_ID)).thenReturn(Mono.just(expected));
+
+    ShippingRate result = service.getRate(request, CUSTOMER_ID).block();
+
+    assertThat(result).isEqualTo(expected);  // tests the stub, not the application
+}
+
 
 ---
 
