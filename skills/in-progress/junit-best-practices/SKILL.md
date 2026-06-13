@@ -28,10 +28,8 @@ Write tests that are:
 - **Write tests that validate a specific behavior or outcome, not just exercise a method.** Each test should represent one complete scenario with a clear expected result.
 - **A test that cannot catch a real bug should not be written.** If a method contains no conditional logic, transformation, or error handling and only
   forwards its arguments to a dependency, skip the test — it verifies Mockito wiring, not application behavior.
-
 - **Extract repeated test data to named constants**: Any identifier, code, or string used in more than one test method should be declared as a `public static final`
   constant with a UUID-like value. This gives test data a semantic name and a single point of change.
-  
 
 <!-- 
 The below guidelines may not be needed. Claude is trained on these.
