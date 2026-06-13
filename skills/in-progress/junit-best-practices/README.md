@@ -14,6 +14,17 @@ This skill activates comprehensive JUnit 5 best practices whenever you write, re
 - Covers exception testing, setup annotation usage, and descriptive failure messages
 - Prevents common anti-patterns: logic in tests, implementation detail testing, shared mutable state
 
+**Core Testing Philosophy:**
+
+Before the numbered rules, the skill establishes these foundational principles:
+
+- **Fast, Deterministic, Isolated, Maintainable, Clear** — the five qualities every test must have
+- **Tests as specifications** — tests document what the system must do, forming a contract that persists across refactorings
+- **Test observable behavior through public APIs, not implementation details** — well-written tests survive internal refactors
+- **Validate a specific behavior or outcome** — each test represents one complete scenario with a clear expected result
+- **A test that cannot catch a real bug should not be written** — if a method has no conditional logic, transformation, or error handling and only forwards arguments to a dependency, skip the test; it verifies Mockito wiring, not application behavior
+- **Extract repeated test data to named constants** — any identifier, code, or string used in more than one test should be a `public static final` constant, giving it a semantic name and a single point of change
+
 **Rules Covered:**
 
 | Rule | Summary |
@@ -80,10 +91,11 @@ Tests should document what the system must do, not how it does it. When internal
 - Vague test names that don't communicate the failure scenario
 - Missing exception tests that leave error paths uncovered
 - Overuse of mocking frameworks where interface-based fakes would be cleaner and more maintainable
+- Tests that verify Mockito wiring rather than application behavior (e.g., pure-delegation methods with no conditional logic)
+- Magic strings and IDs scattered across multiple test methods with no single point of change
 
 ---
 
 ## Files
 
-- `SKILL.md` — Skill metadata and `applyTo` configuration
-- `instructions.md` — Full rule definitions with good and bad examples for each rule
+- `SKILL.md` — Skill metadata, `applyTo` configuration, and full rule definitions with good and bad examples for each rule
