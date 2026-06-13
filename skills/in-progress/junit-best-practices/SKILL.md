@@ -59,22 +59,38 @@ The below guidelines may not be needed. Claude is trained on these.
 **Example of a trivial delegation test to avoid**
 ```java
 // Production code — pure delegation, no logic
-class ShippingService {
-    public Mono<ShippingRate> getRate(ShippingRequest request, String customerId) {
-        return client.getRate(request, customerId);
+class CardPaymentService {
+    private final PaymentGateway gateway;
+
+    public CardPaymentService(PaymentGateway gateway) {
+        this.gateway = gateway;
+    }
+
+    public PaymentResult charge(CreditCard card, BigDecimal amount) {
+        return gateway.charge(card, amount);
     }
 }
 
-// ❌ ANTI-PATTERN: Proves only that Mockito returns what you told it to
-@Test
-void getRate_withValidRequest_returnsDelegatedRate() {
-    when(client.getRate(request, CUSTOMER_ID)).thenReturn(Mono.just(expected));
+// ❌ ANTI-PATTERN: A test that cannot catch a real bug should not be written — this proves only that Mockito returns what you told it to
+class CardPaymentServiceTest {
+    @Test
+    void cardPayment_chargeValidCard_returnsDelegatedResult() {
+        // Given
+        PaymentGateway mockGateway = mock(PaymentGateway.class);
+        CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
+        BigDecimal amount = new BigDecimal("99.99");
+        PaymentResult expected = new PaymentResult(PaymentStatus.APPROVED, "AUTH123");
+        when(mockGateway.charge(card, amount)).thenReturn(expected);
+        CardPaymentService service = new CardPaymentService(mockGateway);
 
-    ShippingRate result = service.getRate(request, CUSTOMER_ID).block();
+        // When
+        PaymentResult result = service.charge(card, amount);
 
-    assertThat(result).isEqualTo(expected);  // tests the stub, not the application
+        // Then
+        assertThat(result).isEqualTo(expected);  // tests the stub, not the application
+    }
 }
-
+```
 
 ---
 
