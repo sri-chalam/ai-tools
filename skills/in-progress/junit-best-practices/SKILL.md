@@ -944,16 +944,24 @@ class TransactionProcessorTest {
     }
 
     @Test
-    void authorize_ShouldSucceed_ForValidAmount() {
+    void transactionProcessing_authorizeValidAmount_returnsAuthorizedAmount() {
+        // Given - processor and testCard initialized in @BeforeEach
+
+        // When
         BigDecimal result = processor.authorize(testCard, new BigDecimal("50.00"));
 
+        // Then
         assertEquals(new BigDecimal("50.00"), result);
     }
 
     @Test
-    void authorize_ShouldProcess_DifferentAmount() {
+    void transactionProcessing_authorizeDifferentAmount_returnsAuthorizedAmount() {
+        // Given - processor and testCard initialized in @BeforeEach
+
+        // When
         BigDecimal result = processor.authorize(testCard, new BigDecimal("100.00"));
 
+        // Then
         assertEquals(new BigDecimal("100.00"), result);
     }
 }
@@ -966,16 +974,25 @@ class BadTransactionProcessorTest {
 
     @Test
     @Order(1) // BAD: Test order matters - red flag!
-    void firstTest_ModifiesSharedState() {
+    void transactionProcessing_accumulateFirstPayment_updatesSharedTotal() {
+        // Given - no local setup; relies on class-level shared mutable state (BAD)
+
+        // When
         totalAmount = totalAmount.add(new BigDecimal("50.00"));
+
+        // Then
         assertEquals(new BigDecimal("50.00"), totalAmount);
     }
 
     @Test
-    @Order(2) // BAD: Depends on firstTest running first
-    void secondTest_DependsOnFirstTest() {
-        // PROBLEM: Fails if firstTest doesn't run first
+    @Order(2) // BAD: Depends on first test running first
+    void transactionProcessing_accumulateSecondPayment_dependsOnPreviousTestState() {
+        // Given - BAD: assumes totalAmount is already $50.00 from the previous test
+
+        // When
         totalAmount = totalAmount.add(new BigDecimal("100.00"));
+
+        // Then - PROBLEM: Fails if first test doesn't run first
         assertEquals(new BigDecimal("150.00"), totalAmount);
     }
 }
