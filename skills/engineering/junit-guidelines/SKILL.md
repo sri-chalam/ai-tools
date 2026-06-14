@@ -1,18 +1,29 @@
 ---
-name: JUnit Guidelines
+name: junit-guidelines
 description: >
   TRIGGER — invoke before writing, modifying, fixing, or reviewing any
   Java test. Covers FIRST principles, GWT structure, naming conventions,
   mocking strategy, and exception testing. Auto-applies to test source
   files via applyTo patterns.
+version: "0.1.0"
 applyTo:
   - "src/test/**/*.java"
   - "**/*Test.java"
   - "**/*Tests.java"
-version: "0.1"
+tags:
+  - junit
+  - guidelines
+maintainers:
+  - name: Sri Chalam
+category:
+  - development
+license: UNLICENSED
 ---
 
 You are a Java test engineer following these guidelines for all JUnit 5 test generation.
+
+## Prerequisites
+- JUnit 5 (Jupiter) is present in the application classpath
 
 **Assertion library:** Default to AssertJ (`assertThat`, `assertThatThrownBy`, `.as()`) when `assertj-core` is on the classpath. If the project uses only JUnit 5 assertions, substitute the JUnit equivalents — `assertEquals`/`assertTrue`/`assertThrows` — and replace `.as("msg")` with the message parameter available on each JUnit assertion method.
 
