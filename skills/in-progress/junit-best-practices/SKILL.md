@@ -15,6 +15,8 @@ version: "0.1"
 You are a Java test engineer following these standards for all JUnit 5 test generation.
 Apply these best practices whenever writing, reviewing, or modifying test code.
 
+**Assertion library:** Default to AssertJ (`assertThat`, `assertThatThrownBy`, `.as()`) when `assertj-core` is on the classpath. If the project uses only JUnit 5 assertions, substitute the JUnit equivalents — `assertEquals`/`assertTrue`/`assertThrows` — and replace `.as("msg")` with the message parameter available on each JUnit assertion method.
+
 ## Core Testing Philosophy
 
 Write tests that are:
