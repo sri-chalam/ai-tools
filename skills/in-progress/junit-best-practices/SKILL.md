@@ -336,75 +336,109 @@ class BadFraudDetectionTest {
 ```java
 // ❌ BAD EXAMPLE: Testing the internal Luhn checksum calculation method (ANTI-PATTERN)
 @Test
-public void shouldCalculateLuhnChecksumCorrectly() {
+void cardValidation_calculateLuhnChecksumDirectly_returnsZeroForValidCard() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
     String cardNumber = "4532015112830366";
-    
-    // calculateLuhnChecksum() is a private helper method
-    // This tests HOW validation works, not WHAT it does
+
+    // When - calculateLuhnChecksum() is a private helper method; tests HOW, not WHAT
     int checksum = validator.calculateLuhnChecksum(cardNumber);
-    
-    assertThat(checksum).isEqualTo(0); // Valid Luhn checksum
+
+    // Then
+    assertThat(checksum).isEqualTo(0);
 }
 
 // ❌ BAD EXAMPLE: Testing internal digit doubling logic (ANTI-PATTERN)
 @Test
-public void shouldDoubleEverySecondDigit() {
+void cardValidation_doubleAlternateDigitsDirectly_returnsDoubledValues() {
+    // Given - private implementation detail of Luhn algorithm
     CreditCardValidator validator = new CreditCardValidator();
-    
-    // Testing private implementation details of Luhn algorithm
     int[] digits = {4, 5, 3, 2, 0, 1, 5, 1};
+
+    // When
     int[] doubled = validator.doubleAlternateDigits(digits);
-    
+
+    // Then
     assertThat(doubled).containsExactly(8, 5, 6, 2, 0, 1, 1, 1);
 }
 
 // ❌ BAD EXAMPLE: Testing internal card type detection logic (ANTI-PATTERN)
 @Test
-public void shouldIdentifyCardTypeByBIN() {
+void cardValidation_detectCardTypeByBinDirectly_returnsVisa() {
+    // Given - private method that identifies card type
     CreditCardValidator validator = new CreditCardValidator();
-    
-    // Testing private method that identifies card type
+
+    // When
     CardType type = validator.detectCardType("4532015112830366");
-    
+
+    // Then
     assertThat(type).isEqualTo(CardType.VISA);
 }
+
 // ✅ GOOD EXAMPLE: Testing public behavior with invalid card
 @Test
-public void isValid_shouldReturnFalse_whenCardNumberFailsLuhnCheck() {
+void cardValidation_validateCardWithInvalidLuhnChecksum_returnsInvalid() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
     String invalidCard = "4532015112830367"; // Last digit wrong
-    
-    // Don't care HOW it validates, just that it rejects invalid cards
+
+    // When
     boolean result = validator.isValid(invalidCard);
-    
+
+    // Then - Don't care HOW it validates, just that it rejects invalid cards
     assertThat(result).isFalse();
 }
 
-// ✅ GOOD EXAMPLE: Testing public API - card type is determined implicitly
+// ✅ GOOD EXAMPLE: Testing public API - each card network validated independently
 @Test
-public void validate_shouldAcceptMultipleCardTypes() {
+void cardValidation_validateVisaCardNumber_returnsValid() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
-    
-    // Test behavior: validator accepts different card types
-    // Don't care about internal BIN detection logic
-    assertThat(validator.isValid("4532015112830366")).isTrue(); // Visa
-    assertThat(validator.isValid("5555555555554444")).isTrue(); // Mastercard
-    assertThat(validator.isValid("378282246310005")).isTrue();  // Amex
+
+    // When
+    boolean result = validator.isValid("4532015112830366");
+
+    // Then
+    assertThat(result).isTrue();
+}
+
+@Test
+void cardValidation_validateMastercardNumber_returnsValid() {
+    // Given
+    CreditCardValidator validator = new CreditCardValidator();
+
+    // When
+    boolean result = validator.isValid("5555555555554444");
+
+    // Then
+    assertThat(result).isTrue();
+}
+
+@Test
+void cardValidation_validateAmexCardNumber_returnsValid() {
+    // Given
+    CreditCardValidator validator = new CreditCardValidator();
+
+    // When
+    boolean result = validator.isValid("378282246310005");
+
+    // Then
+    assertThat(result).isTrue();
 }
 
 // ✅ GOOD EXAMPLE: Testing validation result, not implementation
 @Test
-public void validate_shouldProvideValidationResult_withDetailedErrors() {
+void cardValidation_validateCardWithInvalidFormat_returnsValidationErrors() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
     String invalidCard = "1234567890123456";
-    
-    // Test the public contract: get validation result
+
+    // When
     ValidationResult result = validator.validate(invalidCard);
-    
+
+    // Then - Don't test HOW it determined invalidity, just THAT it did
     assertThat(result.isValid()).isFalse();
     assertThat(result.getErrors()).contains("Invalid card number format");
-    // We don't test HOW it determined invalidity, just THAT it did
 }
 ```
 
