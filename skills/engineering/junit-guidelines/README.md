@@ -70,6 +70,10 @@ ln -s /path/to/skill-directory/junit-guidelines ~/.claude/skills/junit-guideline
 
 Replace `/path/to/skill-directory` with the actual path where you cloned the repository.
 
+> **Note:** The skill is installed at the user level (`~/.claude/skills/`) so it is available across all your projects. A symbolic link is used instead of copying files because the skill evolves frequently — a `git pull` in the cloned repository immediately picks up the latest guidelines without re-copying anything.
+
+> **Note:** The path `~/.claude/skills/` is specific to Claude Code. If you are using a different AI coding assistant, point the symbolic link to the equivalent user-level skills directory for that tool.
+
 **Updating the skill**
 
 ```bash
@@ -78,6 +82,18 @@ git pull
 ```
 
 Then restart your AI agent (e.g., restart VS Code) to pick up the latest changes.
+
+**After Setup**
+
+After adding the symbolic link and restarting, whenever there is a need to work with test cases, the model usually loads the Skill automatically. Sometimes the model may skip loading the skill if the context does not clearly indicate test-related work.
+
+**Manual Invocation**
+
+Explicitly invoking the skill guarantees it is loaded, regardless of context:
+
+```bash
+/junit-guidelines Using the JUnit guidelines, generate test cases for @/path/to/OrderService.java
+```
 
 ---
 
