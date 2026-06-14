@@ -584,29 +584,35 @@ class PaymentProcessorTest {
     
     @Test
     void paymentProcessing_processValidCard_returnsSuccess() {
+        // Given
         when(mockGateway.authorize(any())).thenReturn(
             new GatewayResponse("APPROVED", "AUTH123")
         );
-        
+
+        // When
         PaymentResult result = processor.processPayment(
-            validCard, 
+            validCard,
             new BigDecimal("99.99")
         );
-        
+
+        // Then
         assertEquals(PaymentStatus.SUCCESS, result.getStatus());
     }
-    
+
     @Test
     void paymentProcessing_processWithGatewayTimeout_retriesAndSucceeds() {
+        // Given
         when(mockGateway.authorize(any()))
             .thenThrow(new GatewayTimeoutException())
             .thenReturn(new GatewayResponse("APPROVED", "AUTH456"));
-        
+
+        // When
         PaymentResult result = processor.processPayment(
-            validCard, 
+            validCard,
             new BigDecimal("50.00")
         );
-        
+
+        // Then
         assertEquals(PaymentStatus.SUCCESS, result.getStatus());
         verify(mockGateway, times(2)).authorize(any());
     }
@@ -649,19 +655,25 @@ class CreditCardValidatorTest {
     
     @Test
     void cardValidation_validateVisaCard_returnsValid() {
+        // Given
         String visaCard = "4532015112830366";
-        
+
+        // When
         boolean result = validator.isValid(visaCard);
-        
+
+        // Then
         assertTrue(result);
     }
-    
+
     @Test
     void binLookup_identifyCardIssuer_returnsCorrectBank() {
+        // Given
         String cardNumber = "4532015112830366";
-        
+
+        // When
         CardIssuer issuer = validator.identifyIssuer(cardNumber);
-        
+
+        // Then
         assertEquals("Chase Bank", issuer.getBankName());
         assertEquals(CardNetwork.VISA, issuer.getNetwork());
     }
