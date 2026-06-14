@@ -1,5 +1,5 @@
 ---
-name: JUnit Best Practices (Java)
+name: JUnit Guidelines
 description: >
   TRIGGER — invoke before writing, modifying, fixing, or reviewing any
   Java test. Covers FIRST principles, GWT structure, naming conventions,
@@ -12,8 +12,7 @@ applyTo:
 version: "0.1"
 ---
 
-You are a Java test engineer following these standards for all JUnit 5 test generation.
-Apply these best practices whenever writing, reviewing, or modifying test code.
+You are a Java test engineer following these guidelines for all JUnit 5 test generation.
 
 **Assertion library:** Default to AssertJ (`assertThat`, `assertThatThrownBy`, `.as()`) when `assertj-core` is on the classpath. If the project uses only JUnit 5 assertions, substitute the JUnit equivalents — `assertEquals`/`assertTrue`/`assertThrows` — and replace `.as("msg")` with the message parameter available on each JUnit assertion method.
 
