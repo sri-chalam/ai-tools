@@ -1,10 +1,10 @@
-# JUnit Best Practices Skill (Java)
+# JUnit Guidelines Skill
 
 An AI skill that enforces production-quality JUnit 5 test standards for Java projects.
 
 ## Summary
 
-This skill activates comprehensive JUnit 5 best practices whenever you write, review, or modify Java test code. It is automatically applied to test source files matching standard Java test naming conventions.
+This skill activates comprehensive JUnit 5 guidelines whenever you write, review, or modify Java test code. It is automatically applied to test source files matching standard Java test naming conventions.
 
 **Key Features:**
 - Enforces FIRST principles (Fast, Independent, Repeatable, Self-Validating, Timely)
@@ -37,7 +37,7 @@ Before the numbered rules, the skill establishes these foundational principles:
 | 6 | Use `@BeforeEach` / `@BeforeAll` appropriately |
 | 7 | Mock external dependencies (databases, cloud services, APIs) |
 | 8 | Use interface-based fakes for stateful, complex dependencies |
-| 9 | Test expected exceptions with `assertThrows` |
+| 9 | Test expected exceptions with `assertThatThrownBy` |
 | 10 | Keep tests independent — no shared mutable state |
 | 11 | Given-When-Then structure for readability |
 | 12 | Write descriptive failure messages |
@@ -55,21 +55,25 @@ This skill auto-applies when working in a Claude Code session that has the skill
 **Step 1: Clone the repository**
 
 ```bash
+# Public Soruce
 git clone https://github.com/sri-chalam/ai-tools.git
+
+# Any other repo that is hosting this skill
+git clone <URL of the repository hosting this skill>
 ```
 
 **Step 2: Create a symbolic link**
 
 ```bash
-ln -s /path/to/ai-tools/skills/in-progress/junit-best-practices ~/.claude/skills/junit-best-practices
+ln -s /path/to/skill-directory/junit-guidelines ~/.claude/skills/junit-guidelines
 ```
 
-Replace `/path/to/ai-tools` with the actual path where you cloned the repository.
+Replace `/path/to/skill-directory` with the actual path where you cloned the repository.
 
 **Updating the skill**
 
 ```bash
-cd /path/to/ai-tools
+cd /path/to/skill-directory
 git pull
 ```
 

@@ -13,18 +13,13 @@ Skills are structured following the Claude Code skill format — each skill live
 | Skill | Description | Works with | Status |
 |-------|-------------|------------|--------|
 | [jira-cli-mcp](skills/engineering/jira-cli-mcp/) | Interact with Jira and export issues to markdown. Uses CLI (token-efficient) with MCP fallback. | Any AI agent | ✅ Ready |
+| [junit-guidelines](skills/engineering/junit-guidelines/) | JUnit 5 test guidelines for Java: FIRST principles, GWT structure, naming, mocking. | Any AI agent | ✅ Ready |
 
 ### Misc
 
 | Skill | Description | Works with | Status |
 |-------|-------------|------------|--------|
 | [youtube-transcript](skills/misc/youtube-transcript/) | Fetch a YouTube transcript and produce a formatted Word document. | Claude Desktop | ✅ Ready |
-
-### In Progress
-
-| Skill | Description | Works with | Status |
-|-------|-------------|------------|--------|
-| [junit-best-practices](skills/in-progress/junit-best-practices/) | JUnit 5 test best practices for Java: FIRST principles, GWT structure, naming, mocking. | Any AI agent | 🚧 In Progress |
 
 ---
 
@@ -33,11 +28,10 @@ Skills are structured following the Claude Code skill format — each skill live
 ```
 skills/
 ├── engineering/
-│   └── jira-cli-mcp/       # Jira CLI + MCP skill
-├── misc/
-│   └── youtube-transcript/ # YouTube transcript → Word doc skill
-└── in-progress/
-    └── junit-best-practices/ # JUnit 5 best practices (WIP)
+│   ├── jira-cli-mcp/       # Jira CLI + MCP skill
+│   └── junit-guidelines/   # JUnit 5 test guidelines
+└── misc/
+    └── youtube-transcript/ # YouTube transcript → Word doc skill
 ```
 
 ---
