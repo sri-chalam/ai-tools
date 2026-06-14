@@ -461,29 +461,41 @@ class CreditCardValidatorTest {
     // ❌ BAD EXAMPLE: Only mentions the action, not the expected outcome (ANTI-PATTERN)
     @Test
     void testValidation() {
+        // Given
         CreditCardValidator validator = new CreditCardValidator();
-        assertFalse(validator.isValid("1234"));
+
+        // When
+        boolean result = validator.isValid("1234");
+
+        // Then
+        assertFalse(result);
     }
-    
+
     // ✅ GOOD EXAMPLE: Complete behavior description with edge case
     @Test
     void cardValidation_validateCorrectLengthWithInvalidLuhn_returnsInvalid() {
+        // Given
         CreditCardValidator validator = new CreditCardValidator();
         String invalidChecksum = "4532015112830367"; // Wrong last digit
-        
+
+        // When
         boolean result = validator.isValid(invalidChecksum);
-        
+
+        // Then
         assertFalse(result);
     }
-    
+
     // ✅ GOOD EXAMPLE: Testing specific card type validation
     @Test
     void cardValidation_validateMastercardNumberWithValidFormat_returnsValid() {
+        // Given
         CreditCardValidator validator = new CreditCardValidator();
         String validMastercard = "5555555555554444";
-        
+
+        // When
         boolean result = validator.isValid(validMastercard);
-        
+
+        // Then
         assertTrue(result);
     }
 }
