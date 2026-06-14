@@ -1,5 +1,5 @@
 ---
-name: JUnit Best Practices (Java)
+name: JUnit Guidelines
 description: >
   TRIGGER — invoke before writing, modifying, fixing, or reviewing any
   Java test. Covers FIRST principles, GWT structure, naming conventions,
@@ -12,8 +12,9 @@ applyTo:
 version: "0.1"
 ---
 
-You are a Java test engineer following these standards for all JUnit 5 test generation.
-Apply these best practices whenever writing, reviewing, or modifying test code.
+You are a Java test engineer following these guidelines for all JUnit 5 test generation.
+
+**Assertion library:** Default to AssertJ (`assertThat`, `assertThatThrownBy`, `.as()`) when `assertj-core` is on the classpath. If the project uses only JUnit 5 assertions, substitute the JUnit equivalents — `assertEquals`/`assertTrue`/`assertThrows` — and replace `.as("msg")` with the message parameter available on each JUnit assertion method.
 
 ## Core Testing Philosophy
 
@@ -59,22 +60,38 @@ The below guidelines may not be needed. Claude is trained on these.
 **Example of a trivial delegation test to avoid**
 ```java
 // Production code — pure delegation, no logic
-class ShippingService {
-    public Mono<ShippingRate> getRate(ShippingRequest request, String customerId) {
-        return client.getRate(request, customerId);
+class CardPaymentService {
+    private final PaymentGateway gateway;
+
+    public CardPaymentService(PaymentGateway gateway) {
+        this.gateway = gateway;
+    }
+
+    public PaymentResult charge(CreditCard card, BigDecimal amount) {
+        return gateway.charge(card, amount);
     }
 }
 
-// ❌ ANTI-PATTERN: Proves only that Mockito returns what you told it to
-@Test
-void getRate_withValidRequest_returnsDelegatedRate() {
-    when(client.getRate(request, CUSTOMER_ID)).thenReturn(Mono.just(expected));
+// ❌ ANTI-PATTERN: A test that cannot catch a real bug should not be written — this proves only that Mockito returns what you told it to
+class CardPaymentServiceTest {
+    @Test
+    void cardPayment_chargeValidCard_returnsDelegatedResult() {
+        // Given
+        PaymentGateway mockGateway = mock(PaymentGateway.class);
+        CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
+        BigDecimal amount = new BigDecimal("99.99");
+        PaymentResult expected = new PaymentResult(PaymentStatus.APPROVED, "AUTH123");
+        when(mockGateway.charge(card, amount)).thenReturn(expected);
+        CardPaymentService service = new CardPaymentService(mockGateway);
 
-    ShippingRate result = service.getRate(request, CUSTOMER_ID).block();
+        // When
+        PaymentResult result = service.charge(card, amount);
 
-    assertThat(result).isEqualTo(expected);  // tests the stub, not the application
+        // Then
+        assertThat(result).isEqualTo(expected);  // tests the stub, not the application
+    }
 }
-
+```
 
 ---
 
@@ -91,8 +108,8 @@ void getRate_withValidRequest_returnsDelegatedRate() {
 // ✅ GOOD EXAMPLE: FAST: This test executes in milliseconds by mocking external payment gateway
 // instead of making real network calls which would take seconds. 
 @Test
-void authorizePayment_ShouldComplete_InMilliseconds() {
-    // Arrange - Use mocks to avoid slow external calls
+void paymentAuthorization_authorizeValidCard_returnsApproved() {
+    // Given - Use mocks to avoid slow external calls
     PaymentGateway mockGateway = mock(PaymentGateway.class);
     when(mockGateway.authorize(any(), any()))
         .thenReturn(new AuthResponse("AUTH123", AuthStatus.APPROVED));
@@ -103,15 +120,16 @@ void authorizePayment_ShouldComplete_InMilliseconds() {
     
     long startTime = System.currentTimeMillis();
     
-    // Act
+    // When
     AuthorizationResult result = service.authorize(card, amount);
     
     long executionTime = System.currentTimeMillis() - startTime;
     
-    // Assert
-    assertEquals(AuthStatus.APPROVED, result.getStatus());
-    assertTrue(executionTime < 100, 
-        "Test should execute in less than 100ms, took: " + executionTime + "ms");
+    // Then
+    assertThat(result.getStatus()).isEqualTo(AuthStatus.APPROVED);
+    assertThat(executionTime)
+        .as("Test should execute in less than 100ms, took: " + executionTime + "ms")
+        .isLessThan(100L);
 }
 
 // ❌ BAD EXAMPLE: SLOW (ANTI-PATTERN) - Avoid this approach 
@@ -136,8 +154,8 @@ void authorizePayment_SlowVersion() {
 // Tests can run in any order without affecting each other.
 class TransactionProcessorTest {
     @Test
-    void processTransaction_ShouldSucceed_ForValidDebitCard() {
-        // Arrange - Each test creates its own fresh instances
+    void transactionProcessing_processDebitCardWithSufficientFunds_returnsApproved() {
+        // Given - Each test creates its own fresh instances
         TransactionProcessor processor = new TransactionProcessor();
         DebitCard debitCard = new DebitCard(
             "4532015112830366", 
@@ -146,19 +164,19 @@ class TransactionProcessorTest {
             new BigDecimal("1000.00") // Available balance
         );
         
-        // Act
+        // When
         TransactionResult result = processor.process(
             debitCard, 
             new BigDecimal("50.00")
         );
         
-        // Assert
-        assertEquals(TransactionStatus.APPROVED, result.getStatus());
+        // Then
+        assertThat(result.getStatus()).isEqualTo(TransactionStatus.APPROVED);
     }
     
     @Test
-    void processTransaction_ShouldDecline_WhenInsufficientFunds() {
-        // Arrange - Independent setup, doesn't rely on previous test
+    void transactionProcessing_processDebitCardWithInsufficientFunds_returnsDeclined() {
+        // Given - Independent setup, doesn't rely on previous test
         TransactionProcessor processor = new TransactionProcessor();
         DebitCard debitCard = new DebitCard(
             "4532015112830366", 
@@ -167,15 +185,15 @@ class TransactionProcessorTest {
             new BigDecimal("25.00") // Low balance
         );
         
-        // Act
+        // When
         TransactionResult result = processor.process(
             debitCard, 
             new BigDecimal("50.00")
         );
         
-        // Assert
-        assertEquals(TransactionStatus.DECLINED, result.getStatus());
-        assertEquals("INSUFFICIENT_FUNDS", result.getDeclineReason());
+        // Then
+        assertThat(result.getStatus()).isEqualTo(TransactionStatus.DECLINED);
+        assertThat(result.getDeclineReason()).isEqualTo("INSUFFICIENT_FUNDS");
     }
 }
 
@@ -188,7 +206,7 @@ class BadTransactionProcessorTest {
     @Order(1) // Test order matters - this is a red flag!
     void test1_CreateAccount() {
         sharedAccount = new Account(new BigDecimal("1000.00"));
-        assertEquals(new BigDecimal("1000.00"), sharedAccount.getBalance());
+        assertThat(sharedAccount.getBalance()).isEqualTo(new BigDecimal("1000.00"));
     }
     
     @Test
@@ -196,57 +214,52 @@ class BadTransactionProcessorTest {
     void test2_DeductFunds() {
         // PROBLEM: Fails if test1 doesn't run first
         sharedAccount.deduct(new BigDecimal("100.00"));
-        assertEquals(new BigDecimal("900.00"), sharedAccount.getBalance());
+        assertThat(sharedAccount.getBalance()).isEqualTo(new BigDecimal("900.00"));
     }
 }
 ```
 
-***Examples of INDEPENDENT principle:***
+***Examples of REPEATABLE principle:***
 ```java
 // ✅ GOOD EXAMPLE: REPEATABLE: Test produces same results every time, regardless of environment.
 // No dependency on current date, random values, or external systems.
 class CurrencyConverterTest {
     @Test
-    void calculateExchangeFee_ShouldBeRepeatable() {
-        // Arrange
+    void feeCalculation_calculateForeignExchangeFeeRepeatedly_returnsSameResult() {
+        // Given
         FeeCalculator calculator = new FeeCalculator();
         Money amount = Money.dollars(1000.00);
         
-        // Act - Run multiple times to prove repeatability
+        // When - Run multiple times to prove repeatability
         BigDecimal fee1 = calculator.calculateForeignExchangeFee(amount);
         BigDecimal fee2 = calculator.calculateForeignExchangeFee(amount);
         BigDecimal fee3 = calculator.calculateForeignExchangeFee(amount);
         
-        // Assert - All results are identical
-        assertEquals(fee1, fee2);
-        assertEquals(fee2, fee3);
-        assertEquals(new BigDecimal("30.00"), fee1); // 3% fee
+        // Then - All results are identical
+        assertThat(fee1).isEqualTo(fee2);
+        assertThat(fee2).isEqualTo(fee3);
+        assertThat(fee1).isEqualTo(new BigDecimal("30.00")); // 3% fee
     }
 }
 
 // ❌ BAD EXAMPLE: Non-repeatable test (ANTI-PATTERN)
 class BadCurrencyConverterTest {   
     @Test
-    void convertAmount_NonRepeatable() {
-        // BAD: Uses current date which changes daily
-        LocalDate today = LocalDate.now();
-        
-        // BAD: Makes real HTTP call to external API
-        ExchangeRateService realService = new LiveExchangeRateService();
-        
-        // BAD: Uses Random which produces different results each run
-        Random random = new Random();
+    void currencyConversion_convertWithLiveExchangeRate_returnsNonDeterministicResult() {
+        // Given
+        LocalDate today = LocalDate.now();        // BAD: changes daily
+        ExchangeRateService realService = new LiveExchangeRateService(); // BAD: real HTTP call
+        Random random = new Random();            // BAD: different each run
         BigDecimal randomAmount = new BigDecimal(random.nextDouble() * 1000);
-        
         CurrencyConverter converter = new CurrencyConverter(realService);
         
-        // This test will produce different results each time it runs
+        // When
         Money result = converter.convert(
             new Money(randomAmount, Currency.USD), 
             Currency.EUR
         );
         
-        // Assertion might pass today but fail tomorrow
+        // Then - assertion might pass today but fail tomorrow
         // assertTrue(result.getAmount().compareTo(new BigDecimal("800")) > 0);
     }
 }
@@ -259,8 +272,8 @@ class BadCurrencyConverterTest {
 // No need to check logs, databases, or console output.
 class FraudDetectionServiceTest {
     @Test
-    void detectFraud_ShouldFlagHighRiskTransaction_Automatically() {
-        // Arrange
+    void fraudDetection_analyzeHighRiskTransaction_flagsAsHighRisk() {
+        // Given
         FraudDetectionService fraudService = new FraudDetectionService();
         
         Transaction suspiciousTransaction = Transaction.builder()
@@ -272,12 +285,12 @@ class FraudDetectionServiceTest {
             .customerLocation("US")
             .build();
         
-        // Act
+        // When
         FraudScore score = fraudService.analyze(suspiciousTransaction);
         
-        // Assert - Clear pass/fail without manual checking
-        assertTrue(score.isHighRisk(), "Transaction should be flagged as high risk");
-        assertTrue(score.getScore() > 75, "Fraud score should exceed 75");
+        // Then - Clear pass/fail without manual checking
+        assertThat(score.isHighRisk()).as("Transaction should be flagged as high risk").isTrue();
+        assertThat(score.getScore()).as("Fraud score should exceed 75").isGreaterThan(75);
         assertThat(score.getRiskFactors())
             .contains("HIGH_AMOUNT", "HIGH_RISK_COUNTRY", "UNUSUAL_TIME");
     }
@@ -287,18 +300,18 @@ class FraudDetectionServiceTest {
 // ❌ BAD EXAMPLE: - Not self-validating (ANTI-PATTERN)
 class BadFraudDetectionTest {    
     @Test
-    void detectFraud_NotSelfValidating() {
+    void fraudDetection_analyzeTransaction_writesToLogInsteadOfAsserting() {
+        // Given
         FraudDetectionService fraudService = new FraudDetectionService();
         Transaction transaction = createTransaction();
         
-        // BAD: Writes to log file - requires manual inspection
+        // When
         fraudService.analyze(transaction);
-        System.out.println("Check fraud_detection.log to see if fraud was detected");
         
+        // Then
+        System.out.println("Check fraud_detection.log to see if fraud was detected"); // BAD: requires manual inspection
         // BAD: No assertions - test always passes
-        // Developer must manually verify the log file to know if test passed
-        
-        // BAD: Writes to database - requires manual query
+        // BAD: Developer must manually query the database to verify
         // "SELECT * FROM fraud_alerts WHERE transaction_id = ?"
     }
 }
@@ -325,80 +338,113 @@ class BadFraudDetectionTest {
 ```java
 // ❌ BAD EXAMPLE: Testing the internal Luhn checksum calculation method (ANTI-PATTERN)
 @Test
-public void shouldCalculateLuhnChecksumCorrectly() {
+void cardValidation_calculateLuhnChecksumDirectly_returnsZeroForValidCard() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
     String cardNumber = "4532015112830366";
-    
-    // calculateLuhnChecksum() is a private helper method
-    // This tests HOW validation works, not WHAT it does
+
+    // When - calculateLuhnChecksum() is a private helper method; tests HOW, not WHAT
     int checksum = validator.calculateLuhnChecksum(cardNumber);
-    
-    assertThat(checksum).isEqualTo(0); // Valid Luhn checksum
+
+    // Then
+    assertThat(checksum).isEqualTo(0);
 }
 
 // ❌ BAD EXAMPLE: Testing internal digit doubling logic (ANTI-PATTERN)
 @Test
-public void shouldDoubleEverySecondDigit() {
+void cardValidation_doubleAlternateDigitsDirectly_returnsDoubledValues() {
+    // Given - private implementation detail of Luhn algorithm
     CreditCardValidator validator = new CreditCardValidator();
-    
-    // Testing private implementation details of Luhn algorithm
     int[] digits = {4, 5, 3, 2, 0, 1, 5, 1};
+
+    // When
     int[] doubled = validator.doubleAlternateDigits(digits);
-    
+
+    // Then
     assertThat(doubled).containsExactly(8, 5, 6, 2, 0, 1, 1, 1);
 }
 
 // ❌ BAD EXAMPLE: Testing internal card type detection logic (ANTI-PATTERN)
 @Test
-public void shouldIdentifyCardTypeByBIN() {
+void cardValidation_detectCardTypeByBinDirectly_returnsVisa() {
+    // Given - private method that identifies card type
     CreditCardValidator validator = new CreditCardValidator();
-    
-    // Testing private method that identifies card type
+
+    // When
     CardType type = validator.detectCardType("4532015112830366");
-    
+
+    // Then
     assertThat(type).isEqualTo(CardType.VISA);
 }
+
 // ✅ GOOD EXAMPLE: Testing public behavior with invalid card
 @Test
-public void isValid_shouldReturnFalse_whenCardNumberFailsLuhnCheck() {
+void cardValidation_validateCardWithInvalidLuhnChecksum_returnsInvalid() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
     String invalidCard = "4532015112830367"; // Last digit wrong
-    
-    // Don't care HOW it validates, just that it rejects invalid cards
+
+    // When
     boolean result = validator.isValid(invalidCard);
-    
+
+    // Then - Don't care HOW it validates, just that it rejects invalid cards
     assertThat(result).isFalse();
 }
 
-// ✅ GOOD EXAMPLE: Testing public API - card type is determined implicitly
+// ✅ GOOD EXAMPLE: Testing public API - each card network validated independently
 @Test
-public void validate_shouldAcceptMultipleCardTypes() {
+void cardValidation_validateVisaCardNumber_returnsValid() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
-    
-    // Test behavior: validator accepts different card types
-    // Don't care about internal BIN detection logic
-    assertThat(validator.isValid("4532015112830366")).isTrue(); // Visa
-    assertThat(validator.isValid("5555555555554444")).isTrue(); // Mastercard
-    assertThat(validator.isValid("378282246310005")).isTrue();  // Amex
+
+    // When
+    boolean result = validator.isValid("4532015112830366");
+
+    // Then
+    assertThat(result).isTrue();
+}
+
+@Test
+void cardValidation_validateMastercardNumber_returnsValid() {
+    // Given
+    CreditCardValidator validator = new CreditCardValidator();
+
+    // When
+    boolean result = validator.isValid("5555555555554444");
+
+    // Then
+    assertThat(result).isTrue();
+}
+
+@Test
+void cardValidation_validateAmexCardNumber_returnsValid() {
+    // Given
+    CreditCardValidator validator = new CreditCardValidator();
+
+    // When
+    boolean result = validator.isValid("378282246310005");
+
+    // Then
+    assertThat(result).isTrue();
 }
 
 // ✅ GOOD EXAMPLE: Testing validation result, not implementation
 @Test
-public void validate_shouldProvideValidationResult_withDetailedErrors() {
+void cardValidation_validateCardWithInvalidFormat_returnsValidationErrors() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
     String invalidCard = "1234567890123456";
-    
-    // Test the public contract: get validation result
+
+    // When
     ValidationResult result = validator.validate(invalidCard);
-    
+
+    // Then - Don't test HOW it determined invalidity, just THAT it did
     assertThat(result.isValid()).isFalse();
     assertThat(result.getErrors()).contains("Invalid card number format");
-    // We don't test HOW it determined invalidity, just THAT it did
 }
 ```
 
 ---
-
 
 ## Rule 4: Use Descriptive Test Names - Behavior, Action, Expected result
 **Rationale:**
@@ -417,30 +463,42 @@ class CreditCardValidatorTest {
     // ❌ BAD EXAMPLE: Only mentions the action, not the expected outcome (ANTI-PATTERN)
     @Test
     void testValidation() {
+        // Given
         CreditCardValidator validator = new CreditCardValidator();
-        assertFalse(validator.isValid("1234"));
+
+        // When
+        boolean result = validator.isValid("1234");
+
+        // Then
+        assertThat(result).isFalse();
     }
-    
+
     // ✅ GOOD EXAMPLE: Complete behavior description with edge case
     @Test
     void cardValidation_validateCorrectLengthWithInvalidLuhn_returnsInvalid() {
+        // Given
         CreditCardValidator validator = new CreditCardValidator();
         String invalidChecksum = "4532015112830367"; // Wrong last digit
-        
+
+        // When
         boolean result = validator.isValid(invalidChecksum);
-        
-        assertFalse(result);
+
+        // Then
+        assertThat(result).isFalse();
     }
-    
+
     // ✅ GOOD EXAMPLE: Testing specific card type validation
     @Test
     void cardValidation_validateMastercardNumberWithValidFormat_returnsValid() {
+        // Given
         CreditCardValidator validator = new CreditCardValidator();
         String validMastercard = "5555555555554444";
-        
+
+        // When
         boolean result = validator.isValid(validMastercard);
-        
-        assertTrue(result);
+
+        // Then
+        assertThat(result).isTrue();
     }
 }
 ```
@@ -461,24 +519,32 @@ class CreditCardValidatorTest {
 ```java
 // ✅ GOOD EXAMPLE - Simple, clear test
 @Test
-void processRefund_ShouldCreditAccount_WhenRefundIsValid() {
+void refundProcessing_refundValidTransaction_returnsCompleted() {
+    // Given
     RefundProcessor processor = new RefundProcessor();
     Transaction originalTransaction = createTransaction("99.99");
-    
+
+    // When
     RefundResult result = processor.refund(originalTransaction);
-    
-    assertEquals(RefundStatus.COMPLETED, result.getStatus());
+
+    // Then
+    assertThat(result.getStatus()).isEqualTo(RefundStatus.COMPLETED);
 }
 
 // ❌ BAD EXAMPLE: AVOID - Logic in test - (ANTI-PATTERN)
 @Test
-void processRefund_BadExample() {
-    // Complex loops and conditionals make tests hard to understand
+void refundProcessing_processRefundWithConditionalLogic_obscuresIntent() {
+    // Given
+    RefundProcessor processor = new RefundProcessor();
+
+    // When - BAD: Complex loops and conditionals make tests hard to understand
     for (int i = 0; i < 10; i++) {
         if (i % 2 == 0) {
             // This is a code smell
         }
     }
+
+    // Then - no clear assertion
 }
 ```
 
@@ -520,30 +586,36 @@ class PaymentProcessorTest {
     
     @Test
     void paymentProcessing_processValidCard_returnsSuccess() {
+        // Given
         when(mockGateway.authorize(any())).thenReturn(
             new GatewayResponse("APPROVED", "AUTH123")
         );
-        
+
+        // When
         PaymentResult result = processor.processPayment(
-            validCard, 
+            validCard,
             new BigDecimal("99.99")
         );
-        
-        assertEquals(PaymentStatus.SUCCESS, result.getStatus());
+
+        // Then
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
     }
-    
+
     @Test
     void paymentProcessing_processWithGatewayTimeout_retriesAndSucceeds() {
+        // Given
         when(mockGateway.authorize(any()))
             .thenThrow(new GatewayTimeoutException())
             .thenReturn(new GatewayResponse("APPROVED", "AUTH456"));
-        
+
+        // When
         PaymentResult result = processor.processPayment(
-            validCard, 
+            validCard,
             new BigDecimal("50.00")
         );
-        
-        assertEquals(PaymentStatus.SUCCESS, result.getStatus());
+
+        // Then
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
         verify(mockGateway, times(2)).authorize(any());
     }
     
@@ -585,21 +657,27 @@ class CreditCardValidatorTest {
     
     @Test
     void cardValidation_validateVisaCard_returnsValid() {
+        // Given
         String visaCard = "4532015112830366";
-        
+
+        // When
         boolean result = validator.isValid(visaCard);
-        
-        assertTrue(result);
+
+        // Then
+        assertThat(result).isTrue();
     }
-    
+
     @Test
     void binLookup_identifyCardIssuer_returnsCorrectBank() {
+        // Given
         String cardNumber = "4532015112830366";
-        
+
+        // When
         CardIssuer issuer = validator.identifyIssuer(cardNumber);
-        
-        assertEquals("Chase Bank", issuer.getBankName());
-        assertEquals(CardNetwork.VISA, issuer.getNetwork());
+
+        // Then
+        assertThat(issuer.getBankName()).isEqualTo("Chase Bank");
+        assertThat(issuer.getNetwork()).isEqualTo(CardNetwork.VISA);
     }
     
     @AfterAll
@@ -636,50 +714,46 @@ class CreditCardValidatorTest {
 **Examples of Mocking External Dependencies**
 ```java
 // ✅ GOOD EXAMPLE: Mocking external payment gateway API
-    @Test
-    void chargeCard_ShouldCallGateway_WhenProcessingPayment() {
-        // Arrange
-        PaymentGateway mockGateway = mock(PaymentGateway.class);
-        when(mockGateway.charge(any(), any())).thenReturn(new GatewayResponse("SUCCESS"));
+@Test
+void paymentProcessing_chargeCardViaMockedGateway_invokesGatewayCharge() {
+    // Given
+    PaymentGateway mockGateway = mock(PaymentGateway.class);
+    when(mockGateway.charge(any(), any())).thenReturn(new GatewayResponse("SUCCESS"));
+    PaymentService service = new PaymentService(mockGateway);
+    CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
 
-        PaymentService service = new PaymentService(mockGateway);
-        CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
+    // When
+    service.processPayment(card, new BigDecimal("99.99"));
 
-        // Act
-        service.processPayment(card, new BigDecimal("99.99"));
-
-        // Assert
-        verify(mockGateway, times(1)).charge(eq(card), eq(new BigDecimal("99.99")));
-    }
+    // Then
+    verify(mockGateway, times(1)).charge(eq(card), eq(new BigDecimal("99.99")));
+}
 
 
 // ❌ BAD EXAMPLE: Making real external calls (ANTI-PATTERN)
 @Test
 @Disabled("This test makes real external calls - DO NOT DO THIS")
-void processPayment_BadExample_RealDynamoDBAndS3() {
-    // BAD: Creates real DynamoDB client
-    DynamoDbClient realDynamoDb = DynamoDbClient.builder()
+void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency() {
+    // Given
+    DynamoDbClient realDynamoDb = DynamoDbClient.builder() // BAD: real DynamoDB client
         .region(Region.US_EAST_1)
         .build();
-
-    // BAD: Creates real S3 client
-    S3Client realS3 = S3Client.builder()
+    S3Client realS3 = S3Client.builder()                   // BAD: real S3 client
         .region(Region.US_EAST_1)
         .build();
-
-    // BAD: Makes real network calls to AWS services
     PaymentProcessor processor = new PaymentProcessor(realDynamoDb, realS3);
-
     CreditCard card = new CreditCard("4532015112830366", "12/26", "123");
     PaymentRequest request = new PaymentRequest(card, new BigDecimal("99.99"));
 
-    // This test will:
-    // - Be slow (network latency)
-    // - Fail if AWS is down or credentials are invalid
-    // - Cost money (AWS charges for DynamoDB/S3 operations)
-    // - Pollute production/test database with test payment records
-    // - Store unnecessary receipt files in S3
+    // When - BAD: makes real network calls to AWS services
+    // - Slow due to network latency
+    // - Fails if AWS is down or credentials are invalid
+    // - Costs money (AWS charges for DynamoDB/S3 operations)
+    // - Pollutes production/test database with test payment records
+    // - Stores unnecessary receipt files in S3
     processor.processPayment(request);
+
+    // Then - no assertions; result depends on external state
 }
 ```
 
@@ -754,16 +828,19 @@ class FakeS3StorageService implements S3StorageService {
 
 // ✅ GOOD EXAMPLE: Test using fake implementation
 @Test
-void shouldProcessPaymentAndStoreReceiptInS3() {
+void paymentProcessing_processValidCardPayment_storesReceiptAndReturnsTransactionId() {
+    // Given
     FakeS3StorageService fakeS3 = new FakeS3StorageService();
     CardPaymentProcessor processor = new CardPaymentProcessor(fakeS3);
 
+    // When
     String transactionId = processor.processPayment("4532123456789010", 99.99);
 
-    assertNotNull(transactionId);
+    // Then
+    assertThat(transactionId).isNotNull();
     String receipt = fakeS3.getReceipt(transactionId);
-    assertTrue(receipt.contains(transactionId));
-    assertTrue(receipt.contains("$99.99"));
+    assertThat(receipt).contains(transactionId);
+    assertThat(receipt).contains("$99.99");
 }
 
 // ❌ BAD EXAMPLE: Tightly coupled to AWS SDK (ANTI-PATTERN)
@@ -795,40 +872,42 @@ class BadCardPaymentProcessor {
 **Rationale:** Verify that code throws appropriate exceptions for invalid inputs or error conditions. This ensures proper error handling and validates that your code fails gracefully with meaningful error messages.
 
 **ALWAYS:**
-- Use assertThrows for exception testing
+- Use assertThatThrownBy for exception testing
 - Verify exception type and message
 - Test both happy path and error scenarios
 
 **NEVER:**
 - Ignore exception testing for error conditions
-- Use try-catch blocks in tests instead of assertThrows
+- Use try-catch blocks in tests instead of assertThatThrownBy
 - Test only success cases without validating failure scenarios
 
 **Examples of Testing Expected Exceptions**
 ```java
 // ✅ GOOD EXAMPLE: Validate exception type and message
 @Test
-void validateCard_ShouldThrowException_WhenNumberIsEmpty() {
+void cardValidation_validateEmptyCardNumber_throwsIllegalArgumentException() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
 
-    IllegalArgumentException exception = assertThrows(
-        IllegalArgumentException.class,
-        () -> validator.isValid("")
-    );
-
-    assertEquals("Card number cannot be empty", exception.getMessage());
+    // When / Then
+    assertThatThrownBy(() -> validator.isValid(""))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Card number cannot be empty");
 }
 
-// ❌ BAD EXAMPLE: Using try-catch instead of assertThrows (ANTI-PATTERN)
+// ❌ BAD EXAMPLE: Using try-catch instead of assertThatThrownBy (ANTI-PATTERN)
 @Test
-void validateCard_BadExample_UsingTryCatch() {
+void cardValidation_validateEmptyCardNumber_usesTryCatchInsteadOfAssertThatThrownBy() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
 
+    // When - BAD: triggers the action inside a try block instead of an assertThatThrownBy lambda
     try {
         validator.isValid("");
-        fail("Expected IllegalArgumentException to be thrown");
+        fail("Expected IllegalArgumentException to be thrown"); // BAD: manual failure marker
     } catch (IllegalArgumentException e) {
-        assertEquals("Card number cannot be empty", e.getMessage());
+        // Then - BAD: verification mixed into the catch block, obscuring intent
+        assertThat(e.getMessage()).isEqualTo("Card number cannot be empty");
     }
 }
 ```
@@ -863,17 +942,25 @@ class TransactionProcessorTest {
     }
 
     @Test
-    void authorize_ShouldSucceed_ForValidAmount() {
+    void transactionProcessing_authorizeValidAmount_returnsAuthorizedAmount() {
+        // Given - processor and testCard initialized in @BeforeEach
+
+        // When
         BigDecimal result = processor.authorize(testCard, new BigDecimal("50.00"));
 
-        assertEquals(new BigDecimal("50.00"), result);
+        // Then
+        assertThat(result).isEqualTo(new BigDecimal("50.00"));
     }
 
     @Test
-    void authorize_ShouldProcess_DifferentAmount() {
+    void transactionProcessing_authorizeDifferentAmount_returnsAuthorizedAmount() {
+        // Given - processor and testCard initialized in @BeforeEach
+
+        // When
         BigDecimal result = processor.authorize(testCard, new BigDecimal("100.00"));
 
-        assertEquals(new BigDecimal("100.00"), result);
+        // Then
+        assertThat(result).isEqualTo(new BigDecimal("100.00"));
     }
 }
 
@@ -885,17 +972,26 @@ class BadTransactionProcessorTest {
 
     @Test
     @Order(1) // BAD: Test order matters - red flag!
-    void firstTest_ModifiesSharedState() {
+    void transactionProcessing_accumulateFirstPayment_updatesSharedTotal() {
+        // Given - no local setup; relies on class-level shared mutable state (BAD)
+
+        // When
         totalAmount = totalAmount.add(new BigDecimal("50.00"));
-        assertEquals(new BigDecimal("50.00"), totalAmount);
+
+        // Then
+        assertThat(totalAmount).isEqualTo(new BigDecimal("50.00"));
     }
 
     @Test
-    @Order(2) // BAD: Depends on firstTest running first
-    void secondTest_DependsOnFirstTest() {
-        // PROBLEM: Fails if firstTest doesn't run first
+    @Order(2) // BAD: Depends on first test running first
+    void transactionProcessing_accumulateSecondPayment_dependsOnPreviousTestState() {
+        // Given - BAD: assumes totalAmount is already $50.00 from the previous test
+
+        // When
         totalAmount = totalAmount.add(new BigDecimal("100.00"));
-        assertEquals(new BigDecimal("150.00"), totalAmount);
+
+        // Then - PROBLEM: Fails if first test doesn't run first
+        assertThat(totalAmount).isEqualTo(new BigDecimal("150.00"));
     }
 }
 ```
@@ -923,7 +1019,7 @@ class BadTransactionProcessorTest {
 ```java
 // ✅ GOOD EXAMPLE: Clear Given-When-Then structure for single behavior
 @Test
-public void shouldApproveTransactionWhenCardHasSufficientBalance() {
+void cardProcessing_processTransactionWithSufficientBalance_approvesTransaction() {
     // Given - Setup preconditions and initial state
     CreditCard card = new CreditCard("4532-1111-2222-3333", LocalDate.of(2027, 12, 31));
     card.setAvailableCredit(new BigDecimal("5000.00"));
@@ -934,39 +1030,42 @@ public void shouldApproveTransactionWhenCardHasSufficientBalance() {
     TransactionResult result = processor.processTransaction(card, purchaseAmount);
 
     // Then - Verify expected outcomes
-    assertTrue(result.isApproved());
-    assertEquals("APPROVED", result.getStatus());
-    assertEquals(new BigDecimal("4900.00"), card.getAvailableCredit());
+    assertThat(result.isApproved()).isTrue();
+    assertThat(result.getStatus()).isEqualTo("APPROVED");
+    assertThat(card.getAvailableCredit()).isEqualTo(new BigDecimal("4900.00"));
 }
 
 
 // ❌ BAD EXAMPLE: No clear Given-When-Then structure, testing multiple behaviors (ANTI-PATTERN)
 @Test
-void testCardProcessing() {
-    // Bad: No clear Given-When-Then structure
-    // Bad: Testing multiple unrelated behaviors in one test
+void cardProcessing_processMultipleTransactionScenarios_combinesUnrelatedBehaviors() {
+    // Given
     CreditCard card = new CreditCard("4532-1111-2222-3333", LocalDate.of(2027, 12, 31));
     card.setAvailableCredit(new BigDecimal("5000.00"));
     CardProcessor processor = new CardProcessor();
 
-    // Behavior 1: Sufficient balance
+    // When - BAD: Behavior 1 (sufficient balance) — each behavior belongs in its own test
     TransactionResult result1 = processor.processTransaction(card, new BigDecimal("100.00"));
-    assertTrue(result1.isApproved());
+    // Then
+    assertThat(result1.isApproved()).isTrue();
 
-    // Behavior 2: Insufficient funds (unrelated to behavior 1)
+    // When - BAD: Behavior 2 (insufficient funds) — unrelated to behavior 1
     TransactionResult result2 = processor.processTransaction(card, new BigDecimal("10000.00"));
-    assertFalse(result2.isApproved());
+    // Then
+    assertThat(result2.isApproved()).isFalse();
 
-    // Behavior 3: Expired card (unrelated to behaviors 1 and 2)
+    // When - BAD: Behavior 3 (expired card) — unrelated to behaviors 1 and 2
     card.setExpirationDate(LocalDate.of(2023, 1, 1));
     TransactionResult result3 = processor.processTransaction(card, new BigDecimal("50.00"));
-    assertFalse(result3.isApproved());
+    // Then
+    assertThat(result3.isApproved()).isFalse();
 }
 
 // ❌ BAD EXAMPLE: Setup and action mixed together (ANTI-PATTERN)
 @Test
-void processTransaction_MixedStructure() {
-    // Bad: No clear separation between Given and When
+void cardProcessing_processTransactionWithInlineSetup_mixesGivenAndWhen() {
+    // Given / When - BAD: object construction and action collapsed into one expression;
+    // no clear boundary between setup and the behavior being tested
     CardProcessor processor = new CardProcessor();
     TransactionResult result = processor.processTransaction(
         new CreditCard("4532-1111-2222-3333", LocalDate.of(2027, 12, 31))
@@ -974,8 +1073,8 @@ void processTransaction_MixedStructure() {
         new BigDecimal("100.00")
     );
 
-    // Then section present but Given and When are unclear
-    assertTrue(result.isApproved());
+    // Then
+    assertThat(result.isApproved()).isTrue();
 }
 ```
 
@@ -1009,8 +1108,8 @@ void processPayment_insufficientFunds_unclearMessage() {
     PaymentResult result = processor.processPayment(card, new BigDecimal("100.00"));
 
     // Then
-    // BAD: Failure message would be: "expected: <true> but was: <false>"
-    assertEquals(false, result.isApproved());
+    // BAD: Failure message would be: "expected: false but was: true"
+    assertThat(result.isApproved()).isFalse();
 }
 
 // ✅ GOOD EXAMPLE: Clear failure message showing expected vs actual
@@ -1048,8 +1147,8 @@ void validateCard_blockedCard_unclearMessage() {
     ValidationResult result = validator.validate(card);
 
     // Then
-    // BAD: Failure message would be: "expected: <ACTIVE> but was: <BLOCKED>"
-    assertEquals(CardStatus.ACTIVE, card.getStatus());
+    // BAD: Failure message would be: "expected: ACTIVE but was: BLOCKED"
+    assertThat(card.getStatus()).isEqualTo(CardStatus.ACTIVE);
 }
 
 // ✅ GOOD EXAMPLE: Descriptive message with object context
@@ -1075,4 +1174,3 @@ void validateCard_blockedCard_clearMessage() {
 ```
 
 ---
-
