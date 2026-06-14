@@ -107,8 +107,8 @@ class CardPaymentServiceTest {
 // ✅ GOOD EXAMPLE: FAST: This test executes in milliseconds by mocking external payment gateway
 // instead of making real network calls which would take seconds. 
 @Test
-void authorizePayment_ShouldComplete_InMilliseconds() {
-    // Arrange - Use mocks to avoid slow external calls
+void paymentAuthorization_authorizeValidCard_returnsApproved() {
+    // Given - Use mocks to avoid slow external calls
     PaymentGateway mockGateway = mock(PaymentGateway.class);
     when(mockGateway.authorize(any(), any()))
         .thenReturn(new AuthResponse("AUTH123", AuthStatus.APPROVED));
@@ -119,12 +119,12 @@ void authorizePayment_ShouldComplete_InMilliseconds() {
     
     long startTime = System.currentTimeMillis();
     
-    // Act
+    // When
     AuthorizationResult result = service.authorize(card, amount);
     
     long executionTime = System.currentTimeMillis() - startTime;
     
-    // Assert
+    // Then
     assertEquals(AuthStatus.APPROVED, result.getStatus());
     assertTrue(executionTime < 100, 
         "Test should execute in less than 100ms, took: " + executionTime + "ms");
@@ -152,8 +152,8 @@ void authorizePayment_SlowVersion() {
 // Tests can run in any order without affecting each other.
 class TransactionProcessorTest {
     @Test
-    void processTransaction_ShouldSucceed_ForValidDebitCard() {
-        // Arrange - Each test creates its own fresh instances
+    void transactionProcessing_processDebitCardWithSufficientFunds_returnsApproved() {
+        // Given - Each test creates its own fresh instances
         TransactionProcessor processor = new TransactionProcessor();
         DebitCard debitCard = new DebitCard(
             "4532015112830366", 
@@ -162,19 +162,19 @@ class TransactionProcessorTest {
             new BigDecimal("1000.00") // Available balance
         );
         
-        // Act
+        // When
         TransactionResult result = processor.process(
             debitCard, 
             new BigDecimal("50.00")
         );
         
-        // Assert
+        // Then
         assertEquals(TransactionStatus.APPROVED, result.getStatus());
     }
     
     @Test
-    void processTransaction_ShouldDecline_WhenInsufficientFunds() {
-        // Arrange - Independent setup, doesn't rely on previous test
+    void transactionProcessing_processDebitCardWithInsufficientFunds_returnsDeclined() {
+        // Given - Independent setup, doesn't rely on previous test
         TransactionProcessor processor = new TransactionProcessor();
         DebitCard debitCard = new DebitCard(
             "4532015112830366", 
@@ -183,13 +183,13 @@ class TransactionProcessorTest {
             new BigDecimal("25.00") // Low balance
         );
         
-        // Act
+        // When
         TransactionResult result = processor.process(
             debitCard, 
             new BigDecimal("50.00")
         );
         
-        // Assert
+        // Then
         assertEquals(TransactionStatus.DECLINED, result.getStatus());
         assertEquals("INSUFFICIENT_FUNDS", result.getDeclineReason());
     }
@@ -217,23 +217,23 @@ class BadTransactionProcessorTest {
 }
 ```
 
-***Examples of INDEPENDENT principle:***
+***Examples of REPEATABLE principle:***
 ```java
 // ✅ GOOD EXAMPLE: REPEATABLE: Test produces same results every time, regardless of environment.
 // No dependency on current date, random values, or external systems.
 class CurrencyConverterTest {
     @Test
-    void calculateExchangeFee_ShouldBeRepeatable() {
-        // Arrange
+    void feeCalculation_calculateForeignExchangeFeeRepeatedly_returnsSameResult() {
+        // Given
         FeeCalculator calculator = new FeeCalculator();
         Money amount = Money.dollars(1000.00);
         
-        // Act - Run multiple times to prove repeatability
+        // When - Run multiple times to prove repeatability
         BigDecimal fee1 = calculator.calculateForeignExchangeFee(amount);
         BigDecimal fee2 = calculator.calculateForeignExchangeFee(amount);
         BigDecimal fee3 = calculator.calculateForeignExchangeFee(amount);
         
-        // Assert - All results are identical
+        // Then - All results are identical
         assertEquals(fee1, fee2);
         assertEquals(fee2, fee3);
         assertEquals(new BigDecimal("30.00"), fee1); // 3% fee
@@ -243,26 +243,21 @@ class CurrencyConverterTest {
 // ❌ BAD EXAMPLE: Non-repeatable test (ANTI-PATTERN)
 class BadCurrencyConverterTest {   
     @Test
-    void convertAmount_NonRepeatable() {
-        // BAD: Uses current date which changes daily
-        LocalDate today = LocalDate.now();
-        
-        // BAD: Makes real HTTP call to external API
-        ExchangeRateService realService = new LiveExchangeRateService();
-        
-        // BAD: Uses Random which produces different results each run
-        Random random = new Random();
+    void currencyConversion_convertWithLiveExchangeRate_returnsNonDeterministicResult() {
+        // Given
+        LocalDate today = LocalDate.now();        // BAD: changes daily
+        ExchangeRateService realService = new LiveExchangeRateService(); // BAD: real HTTP call
+        Random random = new Random();            // BAD: different each run
         BigDecimal randomAmount = new BigDecimal(random.nextDouble() * 1000);
-        
         CurrencyConverter converter = new CurrencyConverter(realService);
         
-        // This test will produce different results each time it runs
+        // When
         Money result = converter.convert(
             new Money(randomAmount, Currency.USD), 
             Currency.EUR
         );
         
-        // Assertion might pass today but fail tomorrow
+        // Then - assertion might pass today but fail tomorrow
         // assertTrue(result.getAmount().compareTo(new BigDecimal("800")) > 0);
     }
 }
@@ -275,8 +270,8 @@ class BadCurrencyConverterTest {
 // No need to check logs, databases, or console output.
 class FraudDetectionServiceTest {
     @Test
-    void detectFraud_ShouldFlagHighRiskTransaction_Automatically() {
-        // Arrange
+    void fraudDetection_analyzeHighRiskTransaction_flagsAsHighRisk() {
+        // Given
         FraudDetectionService fraudService = new FraudDetectionService();
         
         Transaction suspiciousTransaction = Transaction.builder()
@@ -288,10 +283,10 @@ class FraudDetectionServiceTest {
             .customerLocation("US")
             .build();
         
-        // Act
+        // When
         FraudScore score = fraudService.analyze(suspiciousTransaction);
         
-        // Assert - Clear pass/fail without manual checking
+        // Then - Clear pass/fail without manual checking
         assertTrue(score.isHighRisk(), "Transaction should be flagged as high risk");
         assertTrue(score.getScore() > 75, "Fraud score should exceed 75");
         assertThat(score.getRiskFactors())
@@ -303,18 +298,18 @@ class FraudDetectionServiceTest {
 // ❌ BAD EXAMPLE: - Not self-validating (ANTI-PATTERN)
 class BadFraudDetectionTest {    
     @Test
-    void detectFraud_NotSelfValidating() {
+    void fraudDetection_analyzeTransaction_writesToLogInsteadOfAsserting() {
+        // Given
         FraudDetectionService fraudService = new FraudDetectionService();
         Transaction transaction = createTransaction();
         
-        // BAD: Writes to log file - requires manual inspection
+        // When
         fraudService.analyze(transaction);
-        System.out.println("Check fraud_detection.log to see if fraud was detected");
         
+        // Then
+        System.out.println("Check fraud_detection.log to see if fraud was detected"); // BAD: requires manual inspection
         // BAD: No assertions - test always passes
-        // Developer must manually verify the log file to know if test passed
-        
-        // BAD: Writes to database - requires manual query
+        // BAD: Developer must manually query the database to verify
         // "SELECT * FROM fraud_alerts WHERE transaction_id = ?"
     }
 }
