@@ -1,5 +1,5 @@
 ---
-name: JUnit Guidelines
+name: junit-guidelines
 description: >
   TRIGGER — invoke before writing, modifying, fixing, or reviewing any
   Java test. Covers FIRST principles, GWT structure, naming conventions,
@@ -9,7 +9,14 @@ applyTo:
   - "src/test/**/*.java"
   - "**/*Test.java"
   - "**/*Tests.java"
-version: "0.1"
+tags:
+  - junit
+  - guidelines
+maintainers:
+  - name: Sri Chalam
+category:
+  - development
+version: "0.1.0"
 ---
 
 You are a Java test engineer following these guidelines for all JUnit 5 test generation.
