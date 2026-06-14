@@ -712,50 +712,46 @@ class CreditCardValidatorTest {
 **Examples of Mocking External Dependencies**
 ```java
 // ✅ GOOD EXAMPLE: Mocking external payment gateway API
-    @Test
-    void chargeCard_ShouldCallGateway_WhenProcessingPayment() {
-        // Arrange
-        PaymentGateway mockGateway = mock(PaymentGateway.class);
-        when(mockGateway.charge(any(), any())).thenReturn(new GatewayResponse("SUCCESS"));
+@Test
+void paymentProcessing_chargeCardViaMockedGateway_invokesGatewayCharge() {
+    // Given
+    PaymentGateway mockGateway = mock(PaymentGateway.class);
+    when(mockGateway.charge(any(), any())).thenReturn(new GatewayResponse("SUCCESS"));
+    PaymentService service = new PaymentService(mockGateway);
+    CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
 
-        PaymentService service = new PaymentService(mockGateway);
-        CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
+    // When
+    service.processPayment(card, new BigDecimal("99.99"));
 
-        // Act
-        service.processPayment(card, new BigDecimal("99.99"));
-
-        // Assert
-        verify(mockGateway, times(1)).charge(eq(card), eq(new BigDecimal("99.99")));
-    }
+    // Then
+    verify(mockGateway, times(1)).charge(eq(card), eq(new BigDecimal("99.99")));
+}
 
 
 // ❌ BAD EXAMPLE: Making real external calls (ANTI-PATTERN)
 @Test
 @Disabled("This test makes real external calls - DO NOT DO THIS")
-void processPayment_BadExample_RealDynamoDBAndS3() {
-    // BAD: Creates real DynamoDB client
-    DynamoDbClient realDynamoDb = DynamoDbClient.builder()
+void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency() {
+    // Given
+    DynamoDbClient realDynamoDb = DynamoDbClient.builder() // BAD: real DynamoDB client
         .region(Region.US_EAST_1)
         .build();
-
-    // BAD: Creates real S3 client
-    S3Client realS3 = S3Client.builder()
+    S3Client realS3 = S3Client.builder()                   // BAD: real S3 client
         .region(Region.US_EAST_1)
         .build();
-
-    // BAD: Makes real network calls to AWS services
     PaymentProcessor processor = new PaymentProcessor(realDynamoDb, realS3);
-
     CreditCard card = new CreditCard("4532015112830366", "12/26", "123");
     PaymentRequest request = new PaymentRequest(card, new BigDecimal("99.99"));
 
-    // This test will:
-    // - Be slow (network latency)
-    // - Fail if AWS is down or credentials are invalid
-    // - Cost money (AWS charges for DynamoDB/S3 operations)
-    // - Pollute production/test database with test payment records
-    // - Store unnecessary receipt files in S3
+    // When - BAD: makes real network calls to AWS services
+    // - Slow due to network latency
+    // - Fails if AWS is down or credentials are invalid
+    // - Costs money (AWS charges for DynamoDB/S3 operations)
+    // - Pollutes production/test database with test payment records
+    // - Stores unnecessary receipt files in S3
     processor.processPayment(request);
+
+    // Then - no assertions; result depends on external state
 }
 ```
 
