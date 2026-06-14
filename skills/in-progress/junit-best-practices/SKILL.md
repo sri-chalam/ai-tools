@@ -1021,7 +1021,7 @@ class BadTransactionProcessorTest {
 ```java
 // ✅ GOOD EXAMPLE: Clear Given-When-Then structure for single behavior
 @Test
-public void shouldApproveTransactionWhenCardHasSufficientBalance() {
+void cardProcessing_processTransactionWithSufficientBalance_approvesTransaction() {
     // Given - Setup preconditions and initial state
     CreditCard card = new CreditCard("4532-1111-2222-3333", LocalDate.of(2027, 12, 31));
     card.setAvailableCredit(new BigDecimal("5000.00"));
@@ -1040,31 +1040,34 @@ public void shouldApproveTransactionWhenCardHasSufficientBalance() {
 
 // ❌ BAD EXAMPLE: No clear Given-When-Then structure, testing multiple behaviors (ANTI-PATTERN)
 @Test
-void testCardProcessing() {
-    // Bad: No clear Given-When-Then structure
-    // Bad: Testing multiple unrelated behaviors in one test
+void cardProcessing_processMultipleTransactionScenarios_combinesUnrelatedBehaviors() {
+    // Given
     CreditCard card = new CreditCard("4532-1111-2222-3333", LocalDate.of(2027, 12, 31));
     card.setAvailableCredit(new BigDecimal("5000.00"));
     CardProcessor processor = new CardProcessor();
 
-    // Behavior 1: Sufficient balance
+    // When - BAD: Behavior 1 (sufficient balance) — each behavior belongs in its own test
     TransactionResult result1 = processor.processTransaction(card, new BigDecimal("100.00"));
+    // Then
     assertTrue(result1.isApproved());
 
-    // Behavior 2: Insufficient funds (unrelated to behavior 1)
+    // When - BAD: Behavior 2 (insufficient funds) — unrelated to behavior 1
     TransactionResult result2 = processor.processTransaction(card, new BigDecimal("10000.00"));
+    // Then
     assertFalse(result2.isApproved());
 
-    // Behavior 3: Expired card (unrelated to behaviors 1 and 2)
+    // When - BAD: Behavior 3 (expired card) — unrelated to behaviors 1 and 2
     card.setExpirationDate(LocalDate.of(2023, 1, 1));
     TransactionResult result3 = processor.processTransaction(card, new BigDecimal("50.00"));
+    // Then
     assertFalse(result3.isApproved());
 }
 
 // ❌ BAD EXAMPLE: Setup and action mixed together (ANTI-PATTERN)
 @Test
-void processTransaction_MixedStructure() {
-    // Bad: No clear separation between Given and When
+void cardProcessing_processTransactionWithInlineSetup_mixesGivenAndWhen() {
+    // Given / When - BAD: object construction and action collapsed into one expression;
+    // no clear boundary between setup and the behavior being tested
     CardProcessor processor = new CardProcessor();
     TransactionResult result = processor.processTransaction(
         new CreditCard("4532-1111-2222-3333", LocalDate.of(2027, 12, 31))
@@ -1072,7 +1075,7 @@ void processTransaction_MixedStructure() {
         new BigDecimal("100.00")
     );
 
-    // Then section present but Given and When are unclear
+    // Then
     assertTrue(result.isApproved());
 }
 ```
@@ -1173,4 +1176,3 @@ void validateCard_blockedCard_clearMessage() {
 ```
 
 ---
-
