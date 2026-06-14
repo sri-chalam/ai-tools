@@ -444,7 +444,6 @@ void cardValidation_validateCardWithInvalidFormat_returnsValidationErrors() {
 
 ---
 
-
 ## Rule 4: Use Descriptive Test Names - Behavior, Action, Expected result
 **Rationale:**
 Test names are often the first thing visible in failure reports. Clear names communicate both the action and expected outcome, making debugging faster.
