@@ -826,12 +826,15 @@ class FakeS3StorageService implements S3StorageService {
 
 // ✅ GOOD EXAMPLE: Test using fake implementation
 @Test
-void shouldProcessPaymentAndStoreReceiptInS3() {
+void paymentProcessing_processValidCardPayment_storesReceiptAndReturnsTransactionId() {
+    // Given
     FakeS3StorageService fakeS3 = new FakeS3StorageService();
     CardPaymentProcessor processor = new CardPaymentProcessor(fakeS3);
 
+    // When
     String transactionId = processor.processPayment("4532123456789010", 99.99);
 
+    // Then
     assertNotNull(transactionId);
     String receipt = fakeS3.getReceipt(transactionId);
     assertTrue(receipt.contains(transactionId));
