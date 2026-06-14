@@ -883,26 +883,32 @@ class BadCardPaymentProcessor {
 ```java
 // ✅ GOOD EXAMPLE: Validate exception type and message
 @Test
-void validateCard_ShouldThrowException_WhenNumberIsEmpty() {
+void cardValidation_validateEmptyCardNumber_throwsIllegalArgumentException() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
 
+    // When
     IllegalArgumentException exception = assertThrows(
         IllegalArgumentException.class,
         () -> validator.isValid("")
     );
 
+    // Then
     assertEquals("Card number cannot be empty", exception.getMessage());
 }
 
 // ❌ BAD EXAMPLE: Using try-catch instead of assertThrows (ANTI-PATTERN)
 @Test
-void validateCard_BadExample_UsingTryCatch() {
+void cardValidation_validateEmptyCardNumber_usesTryCatchInsteadOfAssertThrows() {
+    // Given
     CreditCardValidator validator = new CreditCardValidator();
 
+    // When - BAD: triggers the action inside a try block instead of an assertThrows lambda
     try {
         validator.isValid("");
-        fail("Expected IllegalArgumentException to be thrown");
+        fail("Expected IllegalArgumentException to be thrown"); // BAD: manual failure marker
     } catch (IllegalArgumentException e) {
+        // Then - BAD: verification mixed into the catch block, obscuring intent
         assertEquals("Card number cannot be empty", e.getMessage());
     }
 }
