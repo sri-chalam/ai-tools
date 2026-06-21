@@ -1185,3 +1185,9 @@ void validateCard_blockedCard_clearMessage() {
 ```
 
 ---
+
+## Final Step: Verify Compilation
+
+After writing all test methods, compile the test source to confirm there are no errors.
+Fix any compilation errors before completing — do not leave broken code.
+Repeat until the build is clean.
