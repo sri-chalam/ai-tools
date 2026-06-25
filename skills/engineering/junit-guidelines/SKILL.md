@@ -1186,8 +1186,30 @@ void validateCard_blockedCard_clearMessage() {
 
 ---
 
-## Final Step: Verify Compilation
+## Final Step: Validate, Incorporate, Compile
 
-After writing all test methods, compile the test source to confirm there are no errors.
-Fix any compilation errors before completing — do not leave broken code.
-Repeat until the build is clean.
+### Step 1 — Delegate validation to the `junit-validator` subagent
+
+**This step requires subagent support (Claude Code / Claude Agent SDK).** If you are running in an environment that cannot invoke subagents (e.g. an AI coding agent without this capability), **skip Step 1 and Step 2 entirely** and proceed to Step 3.
+
+If subagents are supported, after writing all test methods invoke the `junit-validator` subagent to validate them in a fresh context. Pass:
+- `testFiles` — absolute path(s) of the test file(s) you just wrote
+- `classesUnderTest` — absolute path(s) of the class(es) under test
+- `guidelinesPath` — the absolute path of this SKILL.md (so the reviewer reads the same rules)
+
+> Requires the `junit-validator` subagent resolvable from `~/.claude/agents/`
+> (see the README's "Step 3: Symlink the validator subagent" for the one-time
+> setup). It is read-only and returns a findings table — it does not edit code.
+
+### Step 2 — Incorporate the findings
+
+The subagent returns a findings table tagged **must-fix / should-fix / nit**.
+- Apply every **must-fix** and **should-fix** finding yourself.
+- Report **nit** findings to the user without changing code.
+
+### Step 3 — Verify compilation (always runs)
+
+After writing all test methods (and after incorporating any findings):
+- Compile the test source to confirm there are no errors.
+- Fix any compilation errors before completing — do not leave broken code.
+- Repeat until the build is clean.
