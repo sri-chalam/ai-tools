@@ -74,12 +74,26 @@ Replace `/path/to/skill-directory` with the actual path where you cloned the rep
 
 > **Note:** The path `~/.claude/skills/` is specific to Claude Code. If you are using a different AI coding assistant, point the symbolic link to the equivalent user-level skills directory for that tool.
 
+**Step 3: Symlink the validator subagent**
+
+The skill's final validation step delegates to the `junit-validator` subagent, which Claude Code resolves from `~/.claude/agents/`. The subagent ships in the repo at `agents/junit-validator.md`, so link it into place:
+
+```bash
+ln -s /path/to/skill-directory/agents/junit-validator.md ~/.claude/agents/junit-validator.md
+```
+
+Replace `/path/to/skill-directory` with the actual path where you cloned the repository.
+
+> **Note:** As with the skill, a symbolic link (not a copy) means a `git pull` immediately picks up validator updates. If `~/.claude/agents/` does not exist yet, create it first with `mkdir -p ~/.claude/agents`.
+
 **Updating the skill**
 
 ```bash
 cd /path/to/skill-directory
 git pull
 ```
+
+A single `git pull` refreshes both symlinks — the skill and the validator subagent — since they point into the same clone.
 
 Then restart your AI agent (e.g., restart VS Code) to pick up the latest changes.
 
@@ -119,3 +133,4 @@ Tests should document what the system must do, not how it does it. When internal
 ## Files
 
 - `SKILL.md` — Skill metadata, `applyTo` configuration, and full rule definitions with good and bad examples for each rule
+- `agents/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
