@@ -1186,6 +1186,92 @@ void validateCard_blockedCard_clearMessage() {
 
 ---
 
+## Rule 13: Test logic-owning methods exhaustively, orchestrating methods for wiring
+
+**Rationale:** A method with its own conditional logic, format handling, or non-trivial computation must
+be tested directly and exhaustively — one test per branch, per accepted input format, per significant
+edge case. A method that orchestrates calls to such methods needs only a few representative scenarios
+confirming the wiring: correct input is passed and the result is stored or returned correctly.
+Testing wiring exhaustively is impractical; testing logic only through a caller leaves branches
+silently uncovered.
+
+**ALWAYS:**
+- Test logic-owning methods directly with one test per branch and per accepted input format
+- Test orchestrating methods with two or three representative scenarios — one per accepted input format is enough
+- When a caller-level test fails, it should point to a wiring problem, not an edge case already proven at the logic level
+
+**NEVER:**
+- Rely on caller-level tests to cover all branches of a logic-owning method
+- Duplicate exhaustive edge-case coverage at every caller level
+
+**Examples**
+
+```java
+// ✅ GOOD: Logic-owning method tested directly for every branch and format.
+// CardExpiryParser accepts "MM/YY" and "MM/YYYY" — each format, null, and
+// invalid input each get their own test.
+class CardExpiryParserTest {
+
+    @Test
+    void expiryParsing_parseShortYearFormat_returnsYearMonthDate() { ... }     // "12/25"
+
+    @Test
+    void expiryParsing_parseLongYearFormat_returnsYearMonthDate() { ... }      // "12/2025"
+
+    @Test
+    void expiryParsing_parseNullExpiry_returnsNull() { ... }
+
+    @Test
+    void expiryParsing_parseInvalidFormat_returnsNull() { ... }                // "25-12"
+
+    @Test
+    void expiryParsing_parseExpiredDate_returnsExpiredYearMonth() { ... }
+}
+
+// ✅ GOOD: Orchestrating method tested with representative scenarios only —
+// edge cases are already proven in CardExpiryParserTest.
+// Null expiry, invalid format, and expired card are tested here because
+// they are business scenarios CardValidator must handle correctly,
+// not because we are re-proving the parser's format logic.
+class CardValidatorTest {
+
+    @Test
+    void cardValidation_validateCardWithShortYearExpiry_passesValidation() { ... }
+
+    @Test
+    void cardValidation_validateCardWithLongYearExpiry_passesValidation() { ... }
+
+    @Test
+    void cardValidation_validateCardWithNullExpiry_failsValidation() { ... }
+
+    @Test
+    void cardValidation_validateCardWithInvalidExpiry_failsValidation() { ... }
+
+    @Test
+    void cardValidation_validateCardWithExpiredDate_failsValidation() { ... }
+}
+
+// ❌ BAD: Re-testing all parser format variants through CardValidator —
+// the "MM/YY" vs "MM/YYYY" branching logic is already proven in CardExpiryParserTest.
+// These tests add no wiring proof; they only re-exercise the parser.
+class BadCardValidatorTest {
+
+    @Test
+    void cardValidation_validateCardWithShortYearExpiry_passesValidation() { ... }   // duplicate
+
+    @Test
+    void cardValidation_validateCardWithLongYearExpiry_passesValidation() { ... }    // duplicate
+
+    @Test
+    void cardValidation_validateCardWithShortYearExpiryAndVisaCard_passesValidation() { ... }  // duplicate
+
+    @Test
+    void cardValidation_validateCardWithLongYearExpiryAndVisaCard_passesValidation() { ... }   // duplicate
+}
+```
+
+---
+
 ## Final Step: Validate, Incorporate, Compile
 
 ### Step 1 — Delegate validation to the `junit-validator` subagent
