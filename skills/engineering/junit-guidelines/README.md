@@ -11,6 +11,7 @@ This skill activates comprehensive JUnit 5 guidelines whenever you write, review
 - Promotes behavior-driven test naming: `behavior_action_expectedResult`
 - Requires Given-When-Then (GWT) structure for all tests
 - Distinguishes when to use Mockito mocks vs. interface-based fakes
+- Distinguishes logic-owning methods (test exhaustively) from orchestrating methods (test representative wiring only)
 - Covers exception testing, setup annotation usage, and descriptive failure messages
 - Prevents common anti-patterns: logic in tests, implementation detail testing, shared mutable state
 
@@ -41,6 +42,7 @@ Before the numbered rules, the skill establishes these foundational principles:
 | 10 | Keep tests independent — no shared mutable state |
 | 11 | Given-When-Then structure for readability |
 | 12 | Write descriptive failure messages |
+| 13 | Test logic-owning methods exhaustively; test orchestrating methods for wiring only |
 
 ---
 
@@ -76,10 +78,10 @@ Replace `/path/to/skill-directory` with the actual path where you cloned the rep
 
 **Step 3: Symlink the validator subagent**
 
-The skill's final validation step delegates to the `junit-validator` subagent, which Claude Code resolves from `~/.claude/agents/`. The subagent ships in the repo at `agents/junit-validator.md`, so link it into place:
+The skill's final validation step delegates to the `junit-validator` subagent, which Claude Code resolves from `~/.claude/agents/`. The subagent ships in the repo at `agents/engineering/junit-guidelines/junit-validator.md`, so link it into place:
 
 ```bash
-ln -s /path/to/skill-directory/agents/junit-validator.md ~/.claude/agents/junit-validator.md
+ln -s /path/to/skill-directory/agents/engineering/junit-guidelines/junit-validator.md ~/.claude/agents/junit-validator.md
 ```
 
 Replace `/path/to/skill-directory` with the actual path where you cloned the repository.
@@ -133,4 +135,4 @@ Tests should document what the system must do, not how it does it. When internal
 ## Files
 
 - `SKILL.md` — Skill metadata, `applyTo` configuration, and full rule definitions with good and bad examples for each rule
-- `agents/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
+- `agents/engineering/junit-guidelines/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
