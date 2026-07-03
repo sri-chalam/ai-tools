@@ -1,6 +1,6 @@
 # JUnit Guidelines Skill
 
-An AI skill that enforces production-quality JUnit 5 test standards for Java projects.
+An AI skill that generates and reviews JUnit 5 tests following best practices for Java projects.
 
 ## Summary
 
