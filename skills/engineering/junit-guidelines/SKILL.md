@@ -462,11 +462,15 @@ void cardValidation_validateCardWithInvalidFormat_returnsValidationErrors() {
 Test names are often the first thing visible in failure reports. Clear names communicate both the action and expected outcome, making debugging faster.
 
 **ALWAYS:**
-- The test method name should have behavior, actions and expected outcomes
+- Follow the exact three-segment, two-underscore pattern: `methodUnderTest_context_expectedResult`
+- **`methodUnderTest`** — the method being exercised
+- **`context`** — the single most distinguishing condition in camelCase; let the `// Given` block carry secondary details
+- **`expectedResult`** — the observable outcome (`returnsTrue`, `returnsFalse`, `throwsIllegalArgumentException`, etc.)
 - Use descriptive names even if verbose
 
 **NEVER:**
 - Name tests vaguely or generically
+- Use more than two underscores — if context feels long, trim to its key phrase, do not split into a fourth segment
 
 **Examples of Descriptive Test Names**
 ```java

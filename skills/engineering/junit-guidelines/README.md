@@ -67,10 +67,10 @@ git clone <URL of the repository hosting this skill>
 **Step 2: Create a symbolic link**
 
 ```bash
-ln -s /path/to/skill-directory/junit-guidelines ~/.claude/skills/junit-guidelines
+ln -s /path/to/ai-tools/skills/engineering/junit-guidelines ~/.claude/skills/junit-guidelines
 ```
 
-Replace `/path/to/skill-directory` with the actual path where you cloned the repository.
+Replace `/path/to/ai-tools` with the actual path where you cloned the repository.
 
 > **Note:** The skill is installed at the user level (`~/.claude/skills/`) so it is available across all your projects. A symbolic link is used instead of copying files because the skill evolves frequently — a `git pull` in the cloned repository immediately picks up the latest guidelines without re-copying anything.
 
@@ -81,17 +81,17 @@ Replace `/path/to/skill-directory` with the actual path where you cloned the rep
 The skill's final validation step delegates to the `junit-validator` subagent, which Claude Code resolves from `~/.claude/agents/`. The subagent ships in the repo at `agents/engineering/junit-guidelines/junit-validator.md`, so link it into place:
 
 ```bash
-ln -s /path/to/skill-directory/agents/engineering/junit-guidelines/junit-validator.md ~/.claude/agents/junit-validator.md
+ln -s /path/to/ai-tools/agents/engineering/junit-guidelines/junit-validator.md ~/.claude/agents/junit-validator.md
 ```
 
-Replace `/path/to/skill-directory` with the actual path where you cloned the repository.
+Replace `/path/to/ai-tools` with the actual path where you cloned the repository.
 
 > **Note:** As with the skill, a symbolic link (not a copy) means a `git pull` immediately picks up validator updates. If `~/.claude/agents/` does not exist yet, create it first with `mkdir -p ~/.claude/agents`.
 
 **Updating the skill**
 
 ```bash
-cd /path/to/skill-directory
+cd /path/to/ai-tools
 git pull
 ```
 
