@@ -103,10 +103,21 @@ Then restart your AI agent (e.g., restart VS Code) to pick up the latest changes
 
 After adding the symbolic link and restarting, whenever there is a need to work with test cases, the model usually loads the Skill automatically. Sometimes the model may skip loading the skill if the context does not clearly indicate test-related work.
 
-**Manual Invocation**
+### Sample Prompts for Manual Invocation
 
-Explicitly invoking the skill guarantees it is loaded, regardless of context:
+Explicitly invoking the skill guarantees it is loaded, regardless of context. The following are example prompts you can copy, adapt, and paste into AI coding agent:
 
+Generate tests for local changes that aren't committed yet (staged and unstaged):
+```bash
+/junit-guidelines Using the JUnit guidelines, review my uncommitted changes (`git diff HEAD`) and generate or update JUnit tests covering the new/modified behavior.
+```
+
+Generate tests for changes introduced by the last two commits:
+```bash
+/junit-guidelines Using the JUnit guidelines, review the changes introduced by the last two commits (`git diff HEAD~2 HEAD`) and generate or update JUnit tests covering the new/modified behavior.
+```
+
+Generate tests for a specific file:
 ```bash
 /junit-guidelines Using the JUnit guidelines, generate test cases for @/path/to/OrderService.java
 ```
