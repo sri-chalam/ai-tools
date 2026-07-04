@@ -1,10 +1,7 @@
 ---
 name: junit-guidelines
 description: >
-  TRIGGER — invoke before writing, modifying, fixing, or reviewing any
-  Java test. Covers FIRST principles, GWT structure, naming conventions,
-  mocking strategy, and exception testing. Auto-applies to test source
-  files via applyTo patterns.
+  TRIGGER — invoke before writing, changing, or reviewing a Java unit test.
 version: "0.1.0"
 applyTo:
   - "src/test/**/*.java"
@@ -43,14 +40,6 @@ Write tests that are:
 - **Extract repeated test data to named constants**: Any identifier, code, or string used in more than one test method should be declared as a `public static final`
   constant with a UUID-like value. This gives test data a semantic name and a single point of change.
 
-<!-- 
-The below guidelines may not be needed. Claude is trained on these.
-
-- **Keep methods short and focused.** Long methods that do multiple things are hard to unit test. Extract logical units into separate, named methods.
-- **Avoid `void` return types in business logic.** Methods that return values are directly assertable in tests. Prefer returning a result object over mutating state or producing side effects.
-- **Design for testability.** Before writing a method, ask: can I call this in isolation and verify its output? If not, refactor the method's boundaries until you can.
--->
-
 ---
 
 ## Rule 1: General Test Guidelines
@@ -63,7 +52,6 @@ The below guidelines may not be needed. Claude is trained on these.
 - Test basic Java/library functionality (e.g., getters/setters, equals/hashCode unless custom logic)
 - Test framework behavior (e.g., Spring's dependency injection)
 - Test auto-generated code
-- Use conditionals, loops, or complex expressions in tests
 - Test method call sequences unless absolutely necessary for the specific scenario. Only verify interactions when the "how" matters
 - Test pure-delegation methods that only forward arguments to a dependency with no logic — see "A test that cannot catch a real bug should not be written"
   in Core Testing Philosophy.
@@ -112,6 +100,7 @@ class CardPaymentServiceTest {
 - No dependencies on other tests or external factors like databases
 - Produce consistent results regardless of environment or execution order
 - Automatically verify pass/fail without manual inspection
+- Write or update tests in the same change that introduces or modifies the behavior — never defer coverage to a later step
 
 **Examples of FIRST Principles:**
 ***Examples of FAST principle:***
@@ -328,6 +317,8 @@ class BadFraudDetectionTest {
 }
 ```
 
+- **Timely:** Write or update tests in the same change that introduces or modifies the behavior — never defer coverage to a later step.
+
 ---
 
 ## Rule 3: Avoid Testing Implementation Details
@@ -336,7 +327,6 @@ class BadFraudDetectionTest {
 **ALWAYS:**
 - Test the "what" not the "how"
 - Access the system under test the same way real users would
-- Avoid testing private methods directly
 - Test the complete behavior through the public interface
 - Tests that break during refactoring indicate they weren't written at the appropriate abstraction level
 
@@ -469,7 +459,6 @@ Test names are often the first thing visible in failure reports. Clear names com
 - Use descriptive names even if verbose
 
 **NEVER:**
-- Name tests vaguely or generically
 - Use more than two underscores — if context feels long, trim to its key phrase, do not split into a fourth segment
 
 **Examples of Descriptive Test Names**
@@ -523,12 +512,7 @@ class CreditCardValidatorTest {
 ## Rule 5: Avoid Logic in Tests
 **Rationale:** Tests should contain minimal logic; complex test logic indicates the test or production code needs refactoring.
 **ALWAYS:**
-- No conditionals (if/else) in test code
-- No loops (for, while) in test code
-- No complex expressions that obscure intent
-
-**NEVER:**
-- Use conditionals, loops, or complex expressions in tests
+- Keep test bodies as simple, linear statements — no conditionals (`if/else`), loops (`for, while`), or complex expressions
 
 **Examples of Avoiding Logic in Tests**
 ```java
@@ -570,12 +554,8 @@ Setup methods help initialize common test dependencies and data, but must be use
 **ALWAYS:** 
 - Use @BeforeEach for per-test setup that ensures each test starts with a fresh state
 - Use @BeforeAll for expensive one-time setup of immutable shared resources
-- Avoid shared mutable state between tests
 - Keep setup methods focused and minimal
 - Document non-obvious setup behavior
-
-**NEVER:**
-- Use shared mutable state between tests
 
 **Examples of @BeforeEach**
 ```java
@@ -721,11 +701,6 @@ class CreditCardValidatorTest {
 - Keep tests fast and reliable
 - Prevent test failures due to external system issues
 
-**NEVER:**
-- Make real calls to external systems in unit tests
-- Rely on external databases, APIs, or network resources
-- Use real file system operations when mocking is appropriate
-
 **Examples of Mocking External Dependencies**
 ```java
 // ✅ GOOD EXAMPLE: Mocking external payment gateway API
@@ -782,10 +757,7 @@ void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency
 - When refactoring is feasible, prefer fakes over mocks for better maintainability
 - Use dependency injection to allow swapping real implementations with fakes during testing
 - Fakes centralize implementation in one place; mocks scatter configuration across multiple test files
-
-**NEVER:**
-- Use mocking frameworks when production code cannot be changed (use Mockito for standard scenarios, PowerMock only as last resort)
-- Make production code tightly coupled to concrete implementations
+- Fall back to a mocking framework when an interface seam isn't feasible — Mockito for standard scenarios, PowerMock only as a last resort for static, final, or private members Mockito can't handle
 
 **Examples of Interface-Based Fake Implementations**
 ```java
@@ -892,9 +864,7 @@ class BadCardPaymentProcessor {
 - Test both happy path and error scenarios
 
 **NEVER:**
-- Ignore exception testing for error conditions
 - Use try-catch blocks in tests instead of assertThatThrownBy
-- Test only success cases without validating failure scenarios
 
 **Examples of Testing Expected Exceptions**
 ```java
@@ -938,8 +908,6 @@ void cardValidation_validateEmptyCardNumber_usesTryCatchInsteadOfAssertThatThrow
 - Tests should pass in any order
 
 **NEVER:**
-- Share mutable state across tests
-- Depend on test execution order
 - Leave side effects that affect other tests
 
 **Examples of Keeping Tests Independent**
@@ -1025,11 +993,6 @@ class BadTransactionProcessorTest {
 - Keep each section clearly separated with comments or blank lines
 - Test one behavior per test method
 
-**NEVER:**
-- Mix setup, action, and verification without clear separation
-- Test multiple unrelated behaviors in a single test method
-- Hide behavior-specific setup in @BeforeEach when it should be visible in the test
-
 **Examples of Given-When-Then Structure**
 ```java
 // ✅ GOOD EXAMPLE: Clear Given-When-Then structure for single behavior
@@ -1106,8 +1069,6 @@ void cardProcessing_processTransactionWithInlineSetup_mixesGivenAndWhen() {
 - Make failure messages readable by non-developers when possible
 
 **NEVER:**
-- Rely on default assertion messages like "expected: <true> but was: <false>"
-- Write generic messages that don't explain the business context
 - Omit important context that would help diagnose the failure
 
 **Examples of Writing Descriptive Failure Messages**
