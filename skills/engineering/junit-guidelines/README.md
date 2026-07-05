@@ -105,6 +105,8 @@ Replace `/path/to/ai-tools` with the actual path where you cloned the repository
 
 > **Note:** As with the skill, a symbolic link (not a copy) means a `git pull` immediately picks up validator updates. If `~/.claude/agents/` does not exist yet, create it first with `mkdir -p ~/.claude/agents`.
 
+> **Note:** This step is only needed for Claude Code, which supports subagents. Codex and other AI coding assistants that lack a subagent mechanism will skip validator delegation; the skill still runs, just without that step.
+
 **Updating the skill**
 
 ```bash
@@ -189,5 +191,5 @@ Tests should document what the system must do, not how it does it. When internal
 
 ## Files
 
-- `SKILL.md` — Skill metadata, `applyTo` configuration, and full rule definitions with good and bad examples for each rule
+- `SKILL.md` — Skill metadata and full rule definitions with good and bad examples for each rule
 - `agents/engineering/junit-guidelines/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table

@@ -1248,9 +1248,8 @@ If subagents are supported, after writing all test methods invoke the `junit-val
 - `classesUnderTest` — absolute path(s) of the class(es) under test
 - `guidelinesPath` — the absolute path of this SKILL.md (so the reviewer reads the same rules)
 
-> Requires the `junit-validator` subagent resolvable from `~/.claude/agents/`
-> (see the README's "Step 3: Symlink the validator subagent" for the one-time
-> setup). It is read-only and returns a findings table — it does not edit code.
+> Requires the `junit-validator` subagent resolvable from `~/.claude/agents/
+> It is read-only and returns a findings table — it does not edit code.
 
 ### Step 2 — Incorporate the findings
 
