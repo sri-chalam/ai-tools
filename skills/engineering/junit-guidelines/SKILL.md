@@ -1,7 +1,7 @@
 ---
 name: junit-guidelines
 description: >
-  TRIGGER — invoke before writing, changing, or reviewing a Java unit test.
+  JUnit test guidelines — invoke before writing, changing, reviewing, filling coverage gaps in, or auditing test coverage across a Java codebase.
 version: "0.1.0"
 applyTo:
   - "src/test/**/*.java"
