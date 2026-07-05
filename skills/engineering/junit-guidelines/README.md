@@ -189,5 +189,5 @@ Tests should document what the system must do, not how it does it. When internal
 
 ## Files
 
-- `SKILL.md` — Skill metadata, `applyTo` configuration, and full rule definitions with good and bad examples for each rule
+- `SKILL.md` — Skill metadata and full rule definitions with good and bad examples for each rule
 - `agents/engineering/junit-guidelines/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
