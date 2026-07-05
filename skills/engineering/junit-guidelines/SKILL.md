@@ -15,6 +15,7 @@ maintainers:
 category:
   - development
 license: UNLICENSED
+disable-model-invocation: false
 ---
 
 You are a Java test engineer following these guidelines for all JUnit 5 test generation.
