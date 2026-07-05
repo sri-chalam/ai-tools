@@ -105,6 +105,8 @@ Replace `/path/to/ai-tools` with the actual path where you cloned the repository
 
 > **Note:** As with the skill, a symbolic link (not a copy) means a `git pull` immediately picks up validator updates. If `~/.claude/agents/` does not exist yet, create it first with `mkdir -p ~/.claude/agents`.
 
+> **Note:** This step is only needed for Claude Code, which supports subagents. Codex and other AI coding assistants that lack a subagent mechanism will skip validator delegation; the skill still runs, just without that step.
+
 **Updating the skill**
 
 ```bash
