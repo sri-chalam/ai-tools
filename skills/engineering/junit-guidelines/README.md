@@ -172,6 +172,41 @@ Find test classes that should use fakes instead of mocks (report only, no code c
 
 Writing unit tests is easy for an AI coding agent — too easy. **Without clear guidance, an agent will happily generate large volumes of tests that mock everything and verify nothing meaningful — commonly called "slop" tests: code that compiles and passes but adds no real verification value**. Two examples of this show up in opposite directions: over-mocked tests silently fail to catch real regressions, while tests coupled to private implementation details break noisily on every refactor even when behavior is unchanged. Both erode trust in the suite — one through false confidence, the other through false alarms. That's worse than having no tests: when the application is later refactored, a wall of low-value tests breaks alongside (or instead of) real regressions, and developers can no longer tell whether a failure signals an actual bug or just a brittle, badly written test. This skill exists to collate best practices — with good and bad examples — so AI-generated tests stay few, meaningful, and genuinely useful during refactoring rather than noise to wade through.
 
+#### Example: A "Slop" Test
+
+```java
+@ExtendWith(MockitoExtension.class)
+public class OrderServieTest {
+  @Mock private OrderClient orderClient;
+  @Mock private CustomerService customerService;
+  @Mock private SQSUtil sqsUtil;
+
+  // Except the orderservice, every depedency of this service is mocked.
+  private OrderService orderService;
+
+  @BeforeEach
+  void setup() {
+    orderService = new OrderService(orderClient, customerService, sqsUtil);
+  }
+
+  @Test
+  public void getOrdersOfCustomer_withValidRequest_returnsOrdersOfCustomers() {
+    // Given
+    when(orderClient.getOrders(any())).thenReturn(List.of(mock(Order.class), mock(Order.class)));
+
+    // When
+    List<Order> orderList = orderService.getOrdersOfCustomre(customerId);
+
+    // Then
+    assertThat(orderList)
+      .as("getOrdersOfCustomer should return exactly the orders belonging to customerId=%s", customerId)
+      .hasSize(2); // verifies the mock's arity, not real behavior
+  }
+}
+```
+
+This test passes no matter what `getOrders` actually does with `customerId` — `any()` accepts any argument, and `hasSize(2)` just confirms the mock returned two mock objects. Nothing here verifies real behavior.
+
 ### Tests as Specifications
 
 Tests should document what the system must do, not how it does it. When internal logic is refactored, well-written tests remain stable because they verify outcomes through public APIs.
