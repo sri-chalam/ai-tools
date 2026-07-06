@@ -59,6 +59,8 @@ Before the numbered rules, the skill establishes these foundational principles:
 
 This skill's guidelines are written for any AI coding agent (Claude Code, Codex, Copilot, etc.). However, the final validation step relies on a subagent — a fresh-context reviewer that checks generated tests against the guidelines, fixes discrepancies, and resolves compile issues. A subagent is used so validation happens with a fresh pair of eyes rather than the same context that wrote the tests, but the subagent invocation mechanism itself is Claude Code-specific and its instructions may not work in other AI coding agents. There does not appear to be a portable, cross-agent way to invoke subagents at this time. On other agents, test generation still follows the guidelines directly; only the separate validation pass is unavailable.
 
+For portability, examples stay inline in this file too — splitting them into separate reference files assumes a load-on-demand mechanism that isn't guaranteed across coding agents.
+
 ---
 
 ## How to Use
