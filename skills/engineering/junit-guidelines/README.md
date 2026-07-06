@@ -128,6 +128,10 @@ After adding the symbolic link and restarting, whenever there is a need to work 
 
 This skill is generic and has no knowledge of a specific project's conventions — for example, whether `customerId` is a `UUID` or a `String`. Such details should live in a project-level `test-instructions.md` (or similar file dedicated to test conventions), not in this skill or in a catch-all CLAUDE.md/AGENTS.md, so the skill stays portable and project conventions stay easy to find as they grow.
 
+### Known Limitations
+
+For tests that mock multiple dependencies without verifying any meaningful behavior, the skill can flag them as "slop" but doesn't prescribe how to fix them — deciding what to do instead requires case-by-case judgment the skill doesn't cover.
+
 ### Sample Prompts for Manual Invocation
 
 Explicitly invoking the skill guarantees it is loaded, regardless of context. The following are example prompts you can copy, adapt, and paste into AI coding agent:
