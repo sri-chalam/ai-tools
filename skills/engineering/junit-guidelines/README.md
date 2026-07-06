@@ -130,7 +130,8 @@ This skill is generic and has no knowledge of a specific project's conventions �
 
 ### Known Limitations
 
-For tests that mock multiple dependencies without verifying any meaningful behavior, the skill can flag them as "slop" but doesn't prescribe how to fix them — deciding what to do instead requires case-by-case judgment the skill doesn't cover.
+The skill states when a mock should be an interface-based fake instead, but doesn't walk through *migrating* an existing test off mocks — introducing the fake, restructuring setup, deciding what state it needs to track — is left to the agent's (and reviewer's) judgment.
+
 
 ### Sample Prompts for Manual Invocation
 
