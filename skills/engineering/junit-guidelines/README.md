@@ -157,6 +157,11 @@ Find and fill gaps in an existing test class:
 /junit-guidelines Using the JUnit guidelines, review @/path/to/OrderService.java and its existing tests in @/path/to/OrderServiceTest.java. Identify missing test coverage (conditional logic paths, edge cases, exceptions) and add the missing test methods.
 ```
 
+Audit an existing test class for rule violations and fix them:
+```bash
+/junit-guidelines Using the JUnit guidelines, review @/path/to/OrderServiceTest.java against every rule in the skill. Identify test methods that violate any rule (naming, logic-in-tests, mocking external deps vs. fakes, delegation testing, etc.), then rewrite each violating method to comply — do not just report violations.
+```
+
 Survey the codebase and rank classes by test-writing ROI (report only, no code changes):
 ```bash
 /junit-guidelines Using the JUnit guidelines, explore the codebase and identify classes whose existing tests (or lack thereof) fall short of the guidelines. Report the top 10 classes that would benefit most from added test coverage, ranked by expected benefit, with a one-line reason for each (e.g. untested logic-owning methods, missing exception paths, no tests at all). Do not write any test code yet — just the report.
@@ -239,3 +244,8 @@ Tests should document what the system must do, not how it does it. When internal
 
 - `SKILL.md` — Skill metadata and full rule definitions with good and bad examples for each rule
 - `agents/engineering/junit-guidelines/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
+
+## References
+
+- Some of the testing best practices baked into the guidelines are inspired by [Software Engineering at Google](https://abseil.io/resources/swe-book), particularly its chapters on unit testing and test doubles.
+- This skill was reviewed against [Writing Great Skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills), which argues a good skill stays small, avoids redundant instructions, and gives each real use case a single, unambiguous trigger.
