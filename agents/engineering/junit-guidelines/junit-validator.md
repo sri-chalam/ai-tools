@@ -37,7 +37,13 @@ Verify that the tests comply with every rule defined in the guidelines. In addit
 
 1. **Naming compliance** — does the method name follow the naming convention (behavior, action, expected result) as defined in the guidelines?
 2. **Name-vs-implementation match** — does the body actually verify what the name claims? E.g. a name ending `returnsValid` must assert a true/valid outcome; `throwsIllegalArgumentException` must use `assertThatThrownBy(...).isInstanceOf(...)`; `returnsDeclined` must assert the declined branch. Flag mismatches.
-3. **Missing coverage** — read the class(es) under test and identify untested public behaviors: branches, error/exception paths, edge cases, state transitions. Apply the guidelines' exclusions (skip getters/setters, pure-delegation methods, framework/auto-generated code — a test that cannot catch a real bug should not be written). If `classesUnderTest` was not supplied or is unreadable, skip this check and note the skip in the Summary (see Prerequisites).
+3. **Missing coverage** — for each public method in the class(es) under test:
+   1. Classify it per Rule 13: **logic-owning** (has its own conditional logic, format handling, or non-trivial computation) vs. **orchestrating** (forwards to other logic-owning methods/dependencies with no meaningful branching of its own).
+   2. For **logic-owning** methods only: enumerate every if/else branch, null check, and catch block. Map each to an existing test that exercises it. Flag any unmapped branch.
+   3. For **orchestrating** methods: do NOT enumerate their branches — that would re-litigate coverage already proven at the logic-owning level, which Rule 13 forbids. Instead confirm 2-3 representative scenarios exist, one per accepted input/format, proving the wiring.
+   4. Apply the guidelines' exclusions throughout: skip getters/setters, pure-delegation methods, framework/auto-generated code, and any branch that cannot fail in a way a test could catch (a test that cannot catch a real bug should not be written).
+
+   If `classesUnderTest` was not supplied or is unreadable, skip this check entirely and note the skip in the Summary (see Prerequisites).
 
 ## Severity rubric
 
