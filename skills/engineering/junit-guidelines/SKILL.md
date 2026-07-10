@@ -43,6 +43,42 @@ Write tests that are:
 
 ---
 
+## Rule 0: Plan Tests Before Writing Code
+
+**Rationale:** Without a plan, generation defaults to one happy-path test per method. Planning forces classification and enumeration to happen once, before any code exists.
+
+**ALWAYS:**
+- Classify each public method of the class under test as **logic-owning** (has its own conditional logic, transformation, or computation) or **orchestrating** (only wires calls to other logic-owning methods) before enumerating tests
+- For each logic-owning method, list one Given/When/Then one-liner per branch, boundary, null/empty case, and error path
+- For each orchestrating method, list only 1–2 representative wiring scenarios
+- Order the plan: error paths and boundaries first, then happy paths — one happy-path test per behavior
+- For every planned test, answer *"what specific production bug would make this test fail?"* Drop any test with no plausible answer
+- Present the plan (test name → behavior) before generating code, then proceed to generate tests
+- If a dependency has no interface seam and none is already planned, stub it with Mockito and move on — don't refactor production code to enable a fake unless that refactor is already in scope
+- This also applies to dependency chains: if the class under test depends on an existing class B that itself calls out to a REST/DB/queue, mock B directly with Mockito. Do not restructure B into a separate gateway/logic split to create a cleaner seam — that touches a second existing class and is out of scope
+- If the class under test and its dependency are both new code being generated in this change, design the dependency behind an interface and prefer a fake only when at least one holds — otherwise stub with Mockito even for new code:
+  - the SUT (class under test) writes state and later reads it back (save-then-get)
+  - the dependency's behavior depends on prior calls (stateful)
+  - three or more planned tests would need to stub the same dependency identically
+- For a new dependency that is itself a thin gateway (its only job is wrapping an external REST/DB/queue call, no branching beyond error mapping): gateway B implements an application-owned interface, injected into A, with an in-memory fake of that interface used in A's tests — same pattern as any other fake. If B has its own logic (request-building, response-mapping, error-translation), test B's own class directly by mocking the underlying HTTP/DB client (`RestTemplate`, `WebClient`, `RestClient`, etc.) with Mockito — no separate wrapper interface for the client call. If B has no logic beyond forwarding, skip its test (pure-delegation rule)
+
+**NEVER:**
+- Generate multiple tests that assert the same behavior with different input literals — flag these for `@ParameterizedTest` consolidation in the plan, not as separate plan rows
+
+**Example of a Test Plan**
+
+| Test name | Behavior |
+|---|---|
+| `cardValidation_nullCardNumber_throwsIllegalArgumentException` | error path: null input |
+| `cardValidation_invalidLuhnChecksum_returnsInvalid` | boundary: fails checksum |
+| `paymentProcessing_gatewayTimeout_returnsDeclinedWithReason` | error path: gateway failure |
+| `paymentProcessing_chargeValidCard_storesReceiptAndReturnsTransactionId` | happy path |
+
+Each row states the behavior under test before any test code exists, so scope isn't decided
+ad hoc mid-generation.
+
+---
+
 ## Rule 1: General Test Guidelines
 **ALWAYS:**
 - Test edge cases and error conditions
@@ -104,50 +140,6 @@ class CardPaymentServiceTest {
 - Write or update tests in the same change that introduces or modifies the behavior — never defer coverage to a later step
 
 **Examples of FIRST Principles:**
-***Examples of FAST principle:***
-```java
-// ✅ GOOD EXAMPLE: FAST: This test executes in milliseconds by mocking external payment gateway
-// instead of making real network calls which would take seconds. 
-@Test
-void paymentAuthorization_authorizeValidCard_returnsApproved() {
-    // Given - Use mocks to avoid slow external calls
-    PaymentGateway mockGateway = mock(PaymentGateway.class);
-    when(mockGateway.authorize(any(), any()))
-        .thenReturn(new AuthResponse("AUTH123", AuthStatus.APPROVED));
-    
-    PaymentAuthorizationService service = new PaymentAuthorizationService(mockGateway);
-    CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
-    Money amount = Money.dollars(250.00);
-    
-    long startTime = System.currentTimeMillis();
-    
-    // When
-    AuthorizationResult result = service.authorize(card, amount);
-    
-    long executionTime = System.currentTimeMillis() - startTime;
-    
-    // Then
-    assertThat(result.getStatus()).isEqualTo(AuthStatus.APPROVED);
-    assertThat(executionTime)
-        .as("Test should execute in less than 100ms, took: " + executionTime + "ms")
-        .isLessThan(100L);
-}
-
-// ❌ BAD EXAMPLE: SLOW (ANTI-PATTERN) - Avoid this approach 
-@Test
-@Disabled("This test is too slow - makes real database and API calls")
-void authorizePayment_SlowVersion() {
-    // BAD: Creates real database connection
-    DatabaseConnection db = new DatabaseConnection("jdbc:mysql://localhost:3306/payments");
-    
-    // BAD: Makes real HTTP call to payment gateway (takes 2-5 seconds)
-    PaymentGateway realGateway = new VisaPaymentGateway("https://api.visa.com");
-    
-    // This test would take several seconds instead of milliseconds
-    PaymentAuthorizationService service = new PaymentAuthorizationService(realGateway, db);
-    // ... rest of test
-}
-```
 
 ***Examples of INDEPENDENT principle:***
 ```java
@@ -318,7 +310,7 @@ class BadFraudDetectionTest {
 }
 ```
 
-- **Timely:** Write or update tests in the same change that introduces or modifies the behavior — never defer coverage to a later step.
+***Timely principle:*** write/update tests in the same change as the behavior
 
 ---
 
@@ -720,32 +712,6 @@ void paymentProcessing_chargeCardViaMockedGateway_invokesGatewayCharge() {
     verify(mockGateway, times(1)).charge(eq(card), eq(new BigDecimal("99.99")));
 }
 
-
-// ❌ BAD EXAMPLE: Making real external calls (ANTI-PATTERN)
-@Test
-@Disabled("This test makes real external calls - DO NOT DO THIS")
-void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency() {
-    // Given
-    DynamoDbClient realDynamoDb = DynamoDbClient.builder() // BAD: real DynamoDB client
-        .region(Region.US_EAST_1)
-        .build();
-    S3Client realS3 = S3Client.builder()                   // BAD: real S3 client
-        .region(Region.US_EAST_1)
-        .build();
-    PaymentProcessor processor = new PaymentProcessor(realDynamoDb, realS3);
-    CreditCard card = new CreditCard("4532015112830366", "12/26", "123");
-    PaymentRequest request = new PaymentRequest(card, new BigDecimal("99.99"));
-
-    // When - BAD: makes real network calls to AWS services
-    // - Slow due to network latency
-    // - Fails if AWS is down or credentials are invalid
-    // - Costs money (AWS charges for DynamoDB/S3 operations)
-    // - Pollutes production/test database with test payment records
-    // - Stores unnecessary receipt files in S3
-    processor.processPayment(request);
-
-    // Then - no assertions; result depends on external state
-}
 ```
 
 ---
@@ -753,12 +719,14 @@ void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency
 ## Rule 8: Use Interface-Based Fake Implementations for Stateful Complex External Dependencies
 **Rationale:** For complex, stateful external service dependencies, prefer fake implementations over mocking frameworks. Fakes provide realistic behavior, are reusable across tests, and result in more maintainable test suites compared to mocks. When an external dependency is indirectly used (not directly injected), fake implementations provide a simpler and more maintainable testing approach.
 
+**Resolving overlap with Rule 7:** A stateful dependency (DB, queue, S3) can look like it qualifies for both rules. Prefer this rule's fake approach only when an interface seam already exists or is trivial to add; otherwise mock per Rule 7 rather than introducing a new seam just to enable a fake.
+
 **ALWAYS:**
 - Prefer interface-based design for testability
-- When refactoring is feasible, prefer fakes over mocks for better maintainability
+- Prefer fakes over mocks only for new code, gated on the criteria in Rule 0 (stateful, save-then-get, or 3+ tests stubbing the same dependency identically)
+- For existing code with no interface seam, stub per Rule 7 — do not refactor to introduce a seam unless that refactor is already in scope
 - Use dependency injection to allow swapping real implementations with fakes during testing
-- Fakes centralize implementation in one place; mocks scatter configuration across multiple test files
-- Fall back to a mocking framework when an interface seam isn't feasible — Mockito for standard scenarios, PowerMock only as a last resort for static, final, or private members Mockito can't handle
+- Fall back to Mockito for standard scenarios, PowerMock only as a last resort for static, final, or private members Mockito can't handle
 
 **Examples of Interface-Based Fake Implementations**
 ```java
