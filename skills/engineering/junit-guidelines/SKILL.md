@@ -22,24 +22,54 @@ You are a Java test engineer following these guidelines for all JUnit 5 test gen
 
 ## Prerequisites
 - JUnit 5 (Jupiter) is present in the application classpath
+- `junit-jupiter-params` is required for parameterized tests (bundled with the `junit-jupiter` aggregate artifact)
 
 **Assertion library:** Default to AssertJ (`assertThat`, `assertThatThrownBy`, `.as()`) when `assertj-core` is on the classpath. If the project uses only JUnit 5 assertions, substitute the JUnit equivalents — `assertEquals`/`assertTrue`/`assertThrows` — and replace `.as("msg")` with the message parameter available on each JUnit assertion method.
+
+**Terminology:** *Test double* — any test replacement for a real dependency. *Stub* — a Mockito double with forced return values (`when/thenReturn`). *Fake* — a lightweight working implementation with in-memory state (Rule 8). *Mock* used loosely in this document means a Mockito double.
 
 ## Core Testing Philosophy
 
 Write tests that are:
-- **Fast**: Execute in milliseconds, not seconds
-- **Deterministic**: Always produce the same result
-- **Isolated**: Test one behavior at a time
+- **Fast, deterministic, isolated, and clear** — see Rule 2 (FIRST Principles) for the operational rules
 - **Maintainable**: Only change when requirements change, not during refactoring
-- **Clear**: Easy to understand and debug
 - **Treat tests as specifications of required behavior** - Tests document what the system must do, forming a contract that persists across refactorings.
 - **Test observable behavior through public APIs, not implementation details** - When refactoring internal logic, well-written tests should remain stable because they verify outcomes rather than how those outcomes are achieved.
 - **Write tests that validate a specific behavior or outcome, not just exercise a method.** Each test should represent one complete scenario with a clear expected result.
-- **A test that cannot catch a real bug should not be written.** If a method contains no conditional logic, transformation, or error handling and only
-  forwards its arguments to a dependency, skip the test — it verifies Mockito wiring, not application behavior.
-- **Extract repeated test data to named constants**: Any identifier, code, or string used in more than one test method should be declared as a `public static final`
-  constant with a UUID-like value. This gives test data a semantic name and a single point of change.
+- **A test that cannot catch a real bug should not be written.** If a method contains no conditional logic, transformation, or error handling and only forwards its arguments to a dependency, skip the test — it verifies Mockito wiring, not application behavior.
+- **Extract repeated test data to named constants**: Any identifier, code, or string used in more than one test method should be declared as a `public static final` constant with a UUID-like value. This gives test data a semantic name and a single point of change.
+- **Never mock value objects, data classes, or pure in-process logic** — construct them for real. This includes Money-style value types, DTOs/records, dates and IDs, collections, mappers/converters, and validators. Mock only dependencies that cross a process boundary (see Rule 7).
+
+---
+
+## Rule 0: Plan Tests Before Writing Code
+
+**Rationale:** Nothing governs *which* tests get written until a reviewer checks coverage after the fact. Without a plan, generation defaults to one happy-path test per method. Planning forces classification and enumeration to happen once, before any code exists.
+
+**ALWAYS:**
+- Classify each public method of the class under test as **logic-owning** (has its own conditional logic, transformation, or computation) or **orchestrating** (only wires calls to other logic-owning methods) before enumerating tests
+- For each logic-owning method, list one Given/When/Then one-liner per branch, boundary, null/empty case, and error path
+- For each orchestrating method, list only 1–2 representative wiring scenarios
+- Order the plan: error paths and boundaries first, then happy paths — one happy-path test per behavior
+- For every planned test, answer *"what specific production bug would make this test fail?"* Drop any test with no plausible answer
+- Present the plan (test name → behavior) before generating code; in interactive sessions, pause for confirmation before proceeding
+- If a dependency has no interface seam and none is already planned, stub it with Mockito and move on — don't refactor production code to enable a fake unless that refactor is already in scope
+
+**NEVER:**
+- Add a test to the plan solely because "more coverage is better" — every entry must survive the bug-catching question above
+- Generate multiple tests that assert the same behavior with different input literals — flag these for `@ParameterizedTest` consolidation in the plan, not as separate plan rows
+
+**Example of a Test Plan**
+
+| Test name | Behavior |
+|---|---|
+| `cardValidation_nullCardNumber_throwsIllegalArgumentException` | error path: null input |
+| `cardValidation_invalidLuhnChecksum_returnsInvalid` | boundary: fails checksum |
+| `paymentProcessing_gatewayTimeout_returnsDeclinedWithReason` | error path: gateway failure |
+| `paymentProcessing_chargeValidCard_storesReceiptAndReturnsTransactionId` | happy path |
+
+Each row states the behavior under test before any test code exists, so scope isn't decided
+ad hoc mid-generation.
 
 ---
 
@@ -47,7 +77,6 @@ Write tests that are:
 **ALWAYS:**
 - Test edge cases and error conditions
 - Test state transitions and business logic
-- Name Tests for Behavior, Action, and Expected Result
 
 **NEVER:**
 - Test basic Java/library functionality (e.g., getters/setters, equals/hashCode unless custom logic)
@@ -118,107 +147,17 @@ void paymentAuthorization_authorizeValidCard_returnsApproved() {
     PaymentAuthorizationService service = new PaymentAuthorizationService(mockGateway);
     CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
     Money amount = Money.dollars(250.00);
-    
-    long startTime = System.currentTimeMillis();
-    
+
     // When
     AuthorizationResult result = service.authorize(card, amount);
-    
-    long executionTime = System.currentTimeMillis() - startTime;
-    
+
     // Then
     assertThat(result.getStatus()).isEqualTo(AuthStatus.APPROVED);
-    assertThat(executionTime)
-        .as("Test should execute in less than 100ms, took: " + executionTime + "ms")
-        .isLessThan(100L);
 }
 
-// ❌ BAD EXAMPLE: SLOW (ANTI-PATTERN) - Avoid this approach 
-@Test
-@Disabled("This test is too slow - makes real database and API calls")
-void authorizePayment_SlowVersion() {
-    // BAD: Creates real database connection
-    DatabaseConnection db = new DatabaseConnection("jdbc:mysql://localhost:3306/payments");
-    
-    // BAD: Makes real HTTP call to payment gateway (takes 2-5 seconds)
-    PaymentGateway realGateway = new VisaPaymentGateway("https://api.visa.com");
-    
-    // This test would take several seconds instead of milliseconds
-    PaymentAuthorizationService service = new PaymentAuthorizationService(realGateway, db);
-    // ... rest of test
-}
 ```
 
-***Examples of INDEPENDENT principle:***
-```java
-// ✅ GOOD EXAMPLE: INDEPENDENT: Each test sets up its own data and doesn't share state.
-// Tests can run in any order without affecting each other.
-class TransactionProcessorTest {
-    @Test
-    void transactionProcessing_processDebitCardWithSufficientFunds_returnsApproved() {
-        // Given - Each test creates its own fresh instances
-        TransactionProcessor processor = new TransactionProcessor();
-        DebitCard debitCard = new DebitCard(
-            "4532015112830366", 
-            "12/25", 
-            "123",
-            new BigDecimal("1000.00") // Available balance
-        );
-        
-        // When
-        TransactionResult result = processor.process(
-            debitCard, 
-            new BigDecimal("50.00")
-        );
-        
-        // Then
-        assertThat(result.getStatus()).isEqualTo(TransactionStatus.APPROVED);
-    }
-    
-    @Test
-    void transactionProcessing_processDebitCardWithInsufficientFunds_returnsDeclined() {
-        // Given - Independent setup, doesn't rely on previous test
-        TransactionProcessor processor = new TransactionProcessor();
-        DebitCard debitCard = new DebitCard(
-            "4532015112830366", 
-            "12/25", 
-            "123",
-            new BigDecimal("25.00") // Low balance
-        );
-        
-        // When
-        TransactionResult result = processor.process(
-            debitCard, 
-            new BigDecimal("50.00")
-        );
-        
-        // Then
-        assertThat(result.getStatus()).isEqualTo(TransactionStatus.DECLINED);
-        assertThat(result.getDeclineReason()).isEqualTo("INSUFFICIENT_FUNDS");
-    }
-}
-
-// ❌ BAD EXAMPLE: Tests that depend on each other (ANTI-PATTERN)
-class BadTransactionProcessorTest {
-    // Shared state - causes tests to be dependent
-    private static Account sharedAccount;
-    
-    @Test
-    @Order(1) // Test order matters - this is a red flag!
-    void test1_CreateAccount() {
-        sharedAccount = new Account(new BigDecimal("1000.00"));
-        assertThat(sharedAccount.getBalance()).isEqualTo(new BigDecimal("1000.00"));
-    }
-    
-    @Test
-    @Order(2) // This test DEPENDS on test1 running first
-    void test2_DeductFunds() {
-        // PROBLEM: Fails if test1 doesn't run first
-        sharedAccount.deduct(new BigDecimal("100.00"));
-        assertThat(sharedAccount.getBalance()).isEqualTo(new BigDecimal("900.00"));
-    }
-}
-```
+***INDEPENDENT principle:*** Each test sets up its own data and passes in any order — see Rule 10 (Keep Tests Independent) for examples.
 
 ***Examples of REPEATABLE principle:***
 ```java
@@ -226,20 +165,16 @@ class BadTransactionProcessorTest {
 // No dependency on current date, random values, or external systems.
 class CurrencyConverterTest {
     @Test
-    void feeCalculation_calculateForeignExchangeFeeRepeatedly_returnsSameResult() {
+    void feeCalculation_calculateForeignExchangeFee_returnsFixedPercentageFee() {
         // Given
         FeeCalculator calculator = new FeeCalculator();
         Money amount = Money.dollars(1000.00);
-        
-        // When - Run multiple times to prove repeatability
-        BigDecimal fee1 = calculator.calculateForeignExchangeFee(amount);
-        BigDecimal fee2 = calculator.calculateForeignExchangeFee(amount);
-        BigDecimal fee3 = calculator.calculateForeignExchangeFee(amount);
-        
-        // Then - All results are identical
-        assertThat(fee1).isEqualTo(fee2);
-        assertThat(fee2).isEqualTo(fee3);
-        assertThat(fee1).isEqualTo(new BigDecimal("30.00")); // 3% fee
+
+        // When
+        BigDecimal fee = calculator.calculateForeignExchangeFee(amount);
+
+        // Then - deterministic input yields a fixed expected value, every run
+        assertThat(fee).isEqualTo(new BigDecimal("30.00")); // 3% fee
     }
 }
 
@@ -297,25 +232,6 @@ class FraudDetectionServiceTest {
     }
 }
 
-
-// ❌ BAD EXAMPLE: - Not self-validating (ANTI-PATTERN)
-class BadFraudDetectionTest {    
-    @Test
-    void fraudDetection_analyzeTransaction_writesToLogInsteadOfAsserting() {
-        // Given
-        FraudDetectionService fraudService = new FraudDetectionService();
-        Transaction transaction = createTransaction();
-        
-        // When
-        fraudService.analyze(transaction);
-        
-        // Then
-        System.out.println("Check fraud_detection.log to see if fraud was detected"); // BAD: requires manual inspection
-        // BAD: No assertions - test always passes
-        // BAD: Developer must manually query the database to verify
-        // "SELECT * FROM fraud_alerts WHERE transaction_id = ?"
-    }
-}
 ```
 
 - **Timely:** Write or update tests in the same change that introduces or modifies the behavior — never defer coverage to a later step.
@@ -393,41 +309,24 @@ void cardValidation_validateCardWithInvalidLuhnChecksum_returnsInvalid() {
     assertThat(result).isFalse();
 }
 
-// ✅ GOOD EXAMPLE: Testing public API - each card network validated independently
-@Test
-void cardValidation_validateVisaCardNumber_returnsValid() {
+// ✅ GOOD EXAMPLE: Testing public API — same behavior across card networks,
+// consolidated into one parameterized test instead of three copies differing
+// only in input literals
+@ParameterizedTest(name = "{1} card number {0} is valid")
+@CsvSource({
+    "4532015112830366, Visa",
+    "5555555555554444, Mastercard",
+    "378282246310005,  Amex"
+})
+void cardValidation_validateCardNumberOfEachNetwork_returnsValid(String cardNumber, String network) {
     // Given
     CreditCardValidator validator = new CreditCardValidator();
 
     // When
-    boolean result = validator.isValid("4532015112830366");
+    boolean result = validator.isValid(cardNumber);
 
     // Then
-    assertThat(result).isTrue();
-}
-
-@Test
-void cardValidation_validateMastercardNumber_returnsValid() {
-    // Given
-    CreditCardValidator validator = new CreditCardValidator();
-
-    // When
-    boolean result = validator.isValid("5555555555554444");
-
-    // Then
-    assertThat(result).isTrue();
-}
-
-@Test
-void cardValidation_validateAmexCardNumber_returnsValid() {
-    // Given
-    CreditCardValidator validator = new CreditCardValidator();
-
-    // When
-    boolean result = validator.isValid("378282246310005");
-
-    // Then
-    assertThat(result).isTrue();
+    assertThat(result).as("%s card should be valid", network).isTrue();
 }
 
 // ✅ GOOD EXAMPLE: Testing validation result, not implementation
@@ -490,20 +389,6 @@ class CreditCardValidatorTest {
 
         // Then
         assertThat(result).isFalse();
-    }
-
-    // ✅ GOOD EXAMPLE: Testing specific card type validation
-    @Test
-    void cardValidation_validateMastercardNumberWithValidFormat_returnsValid() {
-        // Given
-        CreditCardValidator validator = new CreditCardValidator();
-        String validMastercard = "5555555555554444";
-
-        // When
-        boolean result = validator.isValid(validMastercard);
-
-        // Then
-        assertThat(result).isTrue();
     }
 }
 ```
@@ -613,16 +498,7 @@ class PaymentProcessorTest {
         // Then
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
         verify(mockGateway, times(2)).authorize(any());
-    }
-    
-    @AfterEach
-    void tearDown() {
-        // Clean up resources if needed
-        // Mocks are automatically reset between tests
-        processor = null;
-        mockGateway = null;
-        validCard = null;
-    }
+    }    
 }
 ```
 
@@ -675,49 +551,50 @@ class CreditCardValidatorTest {
         assertThat(issuer.getBankName()).isEqualTo("Chase Bank");
         assertThat(issuer.getNetwork()).isEqualTo(CardNetwork.VISA);
     }
-    
-    @AfterAll
-    static void tearDownOnce() {
-        // Clean up expensive resources
-        networkRules = null;
-        binDatabase = null;
-    }
 }
 ```
 
 ---
 
 ## Rule 7: Mock External Dependencies
-**Rationale:** Use mocking frameworks to isolate the unit under test from external systems like AWS (Cloud) Services, databases, APIs, and file systems. This keeps tests fast, reliable, and prevents test failures due to external system issues.
+**Rationale:** Isolate the unit under test from external systems like AWS (Cloud) Services, databases, APIs, and file systems — with a mocking framework, or with a fake per Rule 8 when an interface seam exists. This keeps tests fast, reliable, and prevents test failures due to external system issues.
+
+In this rule, "mock" means a Mockito double used to **stub return values** (`when/thenReturn`) so the test can assert the SUT's observable outcome. Use `verify()` only when the side effect *is* the contract and leaves no observable state or return value to assert (e.g. `sendEmail`, `publishEvent`) — never verify calls whose result you can already assert.
 
 **ALWAYS:**
-- Mock external services only
+- Stub external services only (mock the dependency, stub its methods with `when/thenReturn`)
   - Message queues/brokers (Kafka, SQS, SNS, etc.)
   - Cache systems (Redis, Memcached, ElastiCache)
   - Third-party libraries that make network calls (payment gateways, email services, etc.)
   - Databases (DynamoDB, Postgres, MySQL, etc.)
   - Cloud storage services (S3)
   - File systems
-- Use frameworks like Mockito for Java
-- Keep tests fast and reliable
-- Prevent test failures due to external system issues
+
+
+**Where to place the double when a dependency itself calls an external system:**
+When the class under test (A) depends on an application class (B) that in turn makes an external call (REST API, DB, queue):
+- **If B is a thin client/gateway** — its only job is making the external call and mapping the response — B *is* the boundary: stub B in A's tests (or fake it per Rule 8 if it's stateful or stubbed identically across many tests)
+- **If B contains its own business logic**, use the **real B** in A's tests and place the double one level deeper, at B's own client/gateway seam — stubbing B directly hard-codes assumptions about B's behavior that nothing verifies
+- **Never** double below the application boundary — do not mock third-party client types such as `RestTemplate`, `WebClient`, `HttpClient`, `S3Client`
+- **Fallback:** if B is logic-owning but exposes no injectable seam and refactoring is out of scope, stub B directly and note the design smell (logic mixed with I/O)
 
 **Examples of Mocking External Dependencies**
 ```java
 // ✅ GOOD EXAMPLE: Mocking external payment gateway API
 @Test
-void paymentProcessing_chargeCardViaMockedGateway_invokesGatewayCharge() {
+void paymentProcessing_chargeValidCard_returnsSuccessfulResult() {
     // Given
     PaymentGateway mockGateway = mock(PaymentGateway.class);
-    when(mockGateway.charge(any(), any())).thenReturn(new GatewayResponse("SUCCESS"));
-    PaymentService service = new PaymentService(mockGateway);
     CreditCard card = new CreditCard("4532015112830366", "12/25", "123");
+    when(mockGateway.charge(eq(card), eq(new BigDecimal("99.99"))))
+        .thenReturn(new GatewayResponse("SUCCESS"));
+    PaymentService service = new PaymentService(mockGateway);
 
     // When
-    service.processPayment(card, new BigDecimal("99.99"));
+    PaymentResult result = service.processPayment(card, new BigDecimal("99.99"));
 
-    // Then
-    verify(mockGateway, times(1)).charge(eq(card), eq(new BigDecimal("99.99")));
+    // Then - assert the observable outcome, not the interaction
+    assertThat(result.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
 }
 
 
@@ -736,12 +613,8 @@ void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency
     CreditCard card = new CreditCard("4532015112830366", "12/26", "123");
     PaymentRequest request = new PaymentRequest(card, new BigDecimal("99.99"));
 
-    // When - BAD: makes real network calls to AWS services
-    // - Slow due to network latency
-    // - Fails if AWS is down or credentials are invalid
-    // - Costs money (AWS charges for DynamoDB/S3 operations)
-    // - Pollutes production/test database with test payment records
-    // - Stores unnecessary receipt files in S3
+    // When - BAD: real network calls to AWS — slow, flaky (depends on AWS
+    // availability and credentials), and pollutes real data stores
     processor.processPayment(request);
 
     // Then - no assertions; result depends on external state
@@ -752,6 +625,13 @@ void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency
 
 ## Rule 8: Use Interface-Based Fake Implementations for Stateful Complex External Dependencies
 **Rationale:** For complex, stateful external service dependencies, prefer fake implementations over mocking frameworks. Fakes provide realistic behavior, are reusable across tests, and result in more maintainable test suites compared to mocks. When an external dependency is indirectly used (not directly injected), fake implementations provide a simpler and more maintainable testing approach.
+
+**Resolving overlap with Rule 7:** A stateful dependency (DB, queue, S3) can look like it qualifies for both rules. Prefer this rule's fake approach only when an interface seam already exists or is trivial to add. "Trivial to add" means ALL of the following hold:
+- The dependency is already injected via constructor (no `new` inside the class under test)
+- The class under test uses only 1–3 methods of the dependency
+- Extracting the interface requires changing only the dependency's class declaration and the injection point — no call sites elsewhere in production code change
+
+Otherwise mock per Rule 7 rather than introducing a new seam just to enable a fake.
 
 **ALWAYS:**
 - Prefer interface-based design for testability
@@ -881,21 +761,6 @@ void cardValidation_validateEmptyCardNumber_throwsIllegalArgumentException() {
         .hasMessage("Card number cannot be empty");
 }
 
-// ❌ BAD EXAMPLE: Using try-catch instead of assertThatThrownBy (ANTI-PATTERN)
-@Test
-void cardValidation_validateEmptyCardNumber_usesTryCatchInsteadOfAssertThatThrownBy() {
-    // Given
-    CreditCardValidator validator = new CreditCardValidator();
-
-    // When - BAD: triggers the action inside a try block instead of an assertThatThrownBy lambda
-    try {
-        validator.isValid("");
-        fail("Expected IllegalArgumentException to be thrown"); // BAD: manual failure marker
-    } catch (IllegalArgumentException e) {
-        // Then - BAD: verification mixed into the catch block, obscuring intent
-        assertThat(e.getMessage()).isEqualTo("Card number cannot be empty");
-    }
-}
 ```
 ---
 
@@ -992,7 +857,6 @@ class BadTransactionProcessorTest {
 - Place Given setup in test methods rather than hiding in @BeforeEach when behavior-specific
 - Use multiple When-Then pairs for multi-step validations when testing sequential operations
 - Keep each section clearly separated with comments or blank lines
-- Test one behavior per test method
 
 **Examples of Given-When-Then Structure**
 ```java
@@ -1109,44 +973,6 @@ void processPayment_insufficientFunds_clearMessage() {
     assertThat(result.getDeclineReason())
         .as("Insufficient funds for transaction")
         .isEqualTo("INSUFFICIENT_FUNDS");
-}
-
-// ❌ BAD EXAMPLE: Generic assertion with no context (ANTI-PATTERN)
-@Test
-void validateCard_blockedCard_unclearMessage() {
-    // Given
-    CreditCard card = new CreditCard("4532123456789012", "12/25", "123");
-    card.setStatus(CardStatus.BLOCKED);
-    card.setBlockedReason("FRAUD_SUSPECTED");
-    CardValidator validator = new CardValidator();
-
-    // When
-    ValidationResult result = validator.validate(card);
-
-    // Then
-    // BAD: Failure message would be: "expected: ACTIVE but was: BLOCKED"
-    assertThat(card.getStatus()).isEqualTo(CardStatus.ACTIVE);
-}
-
-// ✅ GOOD EXAMPLE: Descriptive message with object context
-@Test
-void validateCard_blockedCard_clearMessage() {
-    // Given
-    CreditCard card = new CreditCard("4532123456789012", "12/25", "123");
-    card.setStatus(CardStatus.BLOCKED);
-    card.setBlockedReason("FRAUD_SUSPECTED");
-    CardValidator validator = new CardValidator();
-
-    // When
-    ValidationResult result = validator.validate(card);
-
-    // Then
-    // GOOD: Failure message includes full context:
-    // "Expected card state ACTIVE, but got card <{number: '****9012', state: 'BLOCKED', blockedReason: 'FRAUD_SUSPECTED'}>"
-    assertThat(card.getStatus())
-        .as("Expected card state ACTIVE, but got card <{number: '%s', state: '%s', blockedReason: '%s'}>",
-            card.getMaskedNumber(), card.getStatus(), card.getBlockedReason())
-        .isEqualTo(CardStatus.ACTIVE);
 }
 ```
 
