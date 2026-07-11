@@ -633,6 +633,8 @@ void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency
 
 Otherwise mock per Rule 7 rather than introducing a new seam just to enable a fake.
 
+**Design-smell heuristic (for audits):** flag any class that directly depends on a third-party client type (`S3Client`, `DynamoDbClient`, `RestTemplate`, `WebClient`, `RestClient`, etc.) with no application-owned interface between it and its callers — it can only ever be mocked, never faked, without a refactor first.
+
 **ALWAYS:**
 - Prefer interface-based design for testability
 - When refactoring is feasible, prefer fakes over mocks for better maintainability

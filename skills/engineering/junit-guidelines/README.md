@@ -180,6 +180,16 @@ Find test classes that should use fakes instead of mocks (report only, no code c
 /junit-guidelines Using the JUnit guidelines, explore the codebase's test classes and identify those mocking stateful, complex external dependencies where an interface-based fake would be more appropriate. Report the top 10 test classes ranked by expected maintainability benefit, with a one-line reason for each (e.g. dependency has multi-step stateful behavior, mock setup is duplicated across many tests). Do not write any code yet — just the report.
 ```
 
+Find production classes that can only be mocked, never faked, because they lack an interface seam (report only, no code changes):
+```bash
+/junit-guidelines Using the JUnit guidelines, find production classes with no interface seam around a third-party client (S3Client, RestTemplate, WebClient, etc.) — meaning they can only be mocked, never faked. Report the top 10, ranked by test-count impact, with a one-line reason each. Report only, no code changes.
+```
+
+Find "slop" tests across the codebase — tests that compile and pass but verify nothing meaningful (report only, no code changes):
+```bash
+/junit-guidelines Using the JUnit guidelines, find "slop" tests (see this README's Slop Test example) — weak-assertion-only tests, tests that only check the stub returned what it was told to return. Report the top 10 offending test classes with a one-line reason each. Report only, no code changes.
+```
+
 ---
 
 ## Why This Skill?
