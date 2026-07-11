@@ -1,7 +1,7 @@
 ---
 name: junit-guidelines
 description: >
-  JUnit test guidelines — invoke before writing, changing, reviewing, filling coverage gaps in, or auditing test coverage across a Java codebase.
+  JUnit test guidelines — invoke before planning, writing, changing, reviewing, or auditing JUnit tests (coverage, quality, or test-double usage) across a Java codebase, including auditing production classes for missing interface seams.
 version: "0.1.0"
 applyTo:
   - "src/test/**/*.java"
