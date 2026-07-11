@@ -18,6 +18,7 @@ This skill applies established unit test best practices to JUnit 5, activated wh
 See [Sample Prompts for Manual Invocation](#sample-prompts-for-manual-invocation) for ready-to-use prompts.
 
 ## Key Features
+- Plans tests before writing code — classifies methods, enumerates behaviors, and picks a test-double strategy per dependency before any test is generated
 - Enforces FIRST principles (Fast, Independent, Repeatable, Self-Validating, Timely)
 - Promotes behavior-driven test naming: `behavior_action_expectedResult`
 - Requires Given-When-Then (GWT) structure for all tests
@@ -36,11 +37,13 @@ Before the numbered rules, the skill establishes these foundational principles:
 - **Validate a specific behavior or outcome** — each test represents one complete scenario with a clear expected result
 - **A test that cannot catch a real bug should not be written** — if a method has no conditional logic, transformation, or error handling and only forwards arguments to a dependency, skip the test; it verifies Mockito wiring, not application behavior
 - **Extract repeated test data to named constants** — any identifier, code, or string used in more than one test should be a `public static final` constant, giving it a semantic name and a single point of change
+- **Never mock value objects, data classes, or pure in-process logic** — construct them for real (Money-style types, DTOs, dates, IDs, collections, mappers, validators)
 
 ## Rules Covered
 
 | Rule | Summary |
 |------|---------|
+| 0 | Plan tests before writing code — classify methods, enumerate behaviors, pick a test-double strategy per dependency |
 | 1 | General test guidelines — what to test and what to skip |
 | 2 | FIRST principles — Fast, Independent, Repeatable, Self-Validating, Timely |
 | 3 | Avoid testing implementation details — test public APIs, not private internals |
@@ -128,6 +131,20 @@ After adding the symbolic link and restarting, whenever there is a need to work 
 
 This skill is generic and has no knowledge of a specific project's conventions — for example, whether `customerId` is a `UUID` or a `String`. Such details should live in a project-level `test-instructions.md` (or similar file dedicated to test conventions), not in this skill or in a catch-all CLAUDE.md/AGENTS.md, so the skill stays portable and project conventions stay easy to find as they grow.
 
+### Strategy vs. Well-Formed Tests
+
+This skill judges whether a test is *well-formed* — correctly named, testing behavior instead of implementation, using the right kind of test double, asserting something meaningful. It cannot decide *what's worth testing* in the first place. That's a strategy question, and it depends on things no class file can tell you:
+
+- **Business risk** — which paths are catastrophic if broken vs. mildly annoying. The skill can't know that a bug in `confirmProperties` costs more than one in `getProperties`.
+- **Production failure history** — the most valuable edge cases often come from past incidents. A null field that caused an outage six months ago isn't visible in the code.
+- **Integration contracts** — what downstream consumers of this service actually depend on. Unit tests don't capture that.
+- **What inputs are actually possible** — production traffic patterns, client behavior, upstream data quality. None of that is in the class file.
+- **Acceptable risk thresholds** — a team building a payments system tests differently than one building a dashboard widget, even with identical code structure.
+
+Strategy is about deciding what matters; this skill is about deciding whether the tests you wrote are well-formed. Those are genuinely different problems — the skill operates on an artifact that already exists, while strategy happens before that artifact is written, and requires a human who understands why the code exists.
+
+**Decide what to test — and why — with a human before invoking this skill to generate the tests.** The skill's job starts once that decision has been made, not before.
+
 ### Known Limitations
 
 The skill states when a mock should be an interface-based fake instead, but doesn't walk through *migrating* an existing test off mocks — introducing the fake, restructuring setup, deciding what state it needs to track — is left to the agent's (and reviewer's) judgment.
@@ -150,6 +167,11 @@ Generate tests for changes introduced by the last two commits:
 Generate tests for a specific file:
 ```bash
 /junit-guidelines Using the JUnit guidelines, generate test cases for @/path/to/OrderService.java
+```
+
+Generate tests using business context the skill can't infer on its own (see [Strategy vs. Well-Formed Tests](#strategy-vs-well-formed-tests)):
+```bash
+/junit-guidelines Using the JUnit guidelines, generate tests for @/path/to/PropertyService.java. confirmProperties is high-risk — a null field there caused a production incident — so cover that edge case and any adjacent null/boundary cases exhaustively. getProperties is low-risk and rarely changes; representative coverage there is enough.
 ```
 
 Find and fill gaps in an existing test class:
@@ -232,6 +254,10 @@ public class OrderServieTest {
 ```
 
 This test passes no matter what `getOrders` actually does with `customerId` — `any()` accepts any argument, and `hasSize(2)` just confirms the mock returned two mock objects. Nothing here verifies real behavior.
+
+### Consistency at Scale
+
+Beyond individual test quality, this skill solves a different problem: keeping many developers consistent over time. Training every developer on a team to apply the same naming convention, the same mock-vs-fake judgment, the same GWT structure — and to keep applying it months later, under deadline pressure, on someone else's code — is hard even with a style guide, because a style guide isn't enforced at the point of writing. A codified skill is applied the same way on every invocation, by every developer's AI agent, without relying on individual memory or discipline.
 
 ### Tests as Specifications
 
