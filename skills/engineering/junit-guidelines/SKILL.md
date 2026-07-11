@@ -52,7 +52,7 @@ Write tests that are:
 - For each orchestrating method, list only 1–2 representative wiring scenarios
 - Order the plan: error paths and boundaries first, then happy paths — one happy-path test per behavior
 - For every planned test, answer *"what specific production bug would make this test fail?"* Drop any test with no plausible answer
-- Present the plan (test name → behavior) before generating code; in interactive sessions, pause for confirmation before proceeding
+- Present the plan (test name → behavior) before generating code, then proceed to generate tests
 - If a dependency has no interface seam and none is already planned, stub it with Mockito and move on — don't refactor production code to enable a fake unless that refactor is already in scope
 
 **NEVER:**
@@ -266,33 +266,6 @@ void cardValidation_calculateLuhnChecksumDirectly_returnsZeroForValidCard() {
 
     // Then
     assertThat(checksum).isEqualTo(0);
-}
-
-// ❌ BAD EXAMPLE: Testing internal digit doubling logic (ANTI-PATTERN)
-@Test
-void cardValidation_doubleAlternateDigitsDirectly_returnsDoubledValues() {
-    // Given - private implementation detail of Luhn algorithm
-    CreditCardValidator validator = new CreditCardValidator();
-    int[] digits = {4, 5, 3, 2, 0, 1, 5, 1};
-
-    // When
-    int[] doubled = validator.doubleAlternateDigits(digits);
-
-    // Then
-    assertThat(doubled).containsExactly(8, 5, 6, 2, 0, 1, 1, 1);
-}
-
-// ❌ BAD EXAMPLE: Testing internal card type detection logic (ANTI-PATTERN)
-@Test
-void cardValidation_detectCardTypeByBinDirectly_returnsVisa() {
-    // Given - private method that identifies card type
-    CreditCardValidator validator = new CreditCardValidator();
-
-    // When
-    CardType type = validator.detectCardType("4532015112830366");
-
-    // Then
-    assertThat(type).isEqualTo(CardType.VISA);
 }
 
 // ✅ GOOD EXAMPLE: Testing public behavior with invalid card
@@ -632,6 +605,8 @@ void paymentProcessing_processPaymentWithRealAwsServices_causesNetworkDependency
 - Extracting the interface requires changing only the dependency's class declaration and the injection point — no call sites elsewhere in production code change
 
 Otherwise mock per Rule 7 rather than introducing a new seam just to enable a fake.
+
+**Design-smell heuristic (for audits):** flag any class that directly depends on a third-party client type (`S3Client`, `DynamoDbClient`, `RestTemplate`, `WebClient`, `RestClient`, etc.) with no application-owned interface between it and its callers — it can only ever be mocked, never faked, without a refactor first.
 
 **ALWAYS:**
 - Prefer interface-based design for testability

@@ -45,6 +45,17 @@ Verify that the tests comply with every rule defined in the guidelines. In addit
 
    If `classesUnderTest` was not supplied or is unreadable, skip this check entirely and note the skip in the Summary (see Prerequisites).
 
+4. **Test-double placement** — for every `mock(...)` / `@Mock` in the test file:
+   1. Mocked type is a value object, data class, DTO, or other pure in-process type (e.g. `Money`, dates, IDs, records, collections, mappers, validators) — **must-fix**. These must be constructed for real, never mocked.
+   2. Mocked type is a third-party client (`RestTemplate`, `WebClient`, `HttpClient`, `S3Client`, `DynamoDbClient`, or similar SDK/framework client) — **must-fix**. The double belongs on an application-owned interface one level above the client, not on the client itself.
+   3. The same method on the same mock is both stubbed (`when(x.foo(...))...`) and verified (`verify(x).foo(...)`) in one test — **should-fix**, redundant: the stubbed return value already proves the call happened with matching args.
+
+5. **Assertion strength** — for every `@Test` / `@ParameterizedTest` method:
+   1. The test's only assertion is `hasSize(...)`, `isNotNull()`, or `isEmpty()` — flag it. **must-fix** if the test name promises specific content (e.g. `returnsOrdersOfCustomer`, `containsHighRiskFactors`) that the assertion never actually checks; **nit** otherwise.
+   2. The test's only assertion checks that the result equals the exact value the test itself stubbed on a mock (e.g. `when(x.foo()).thenReturn(expected)` ... `assertThat(result).isEqualTo(expected)` with no other assertion) — **must-fix**. This is circular: it proves Mockito returns what it was told, not that the class under test did anything (see the README's Slop Test example).
+
+6. **Parameterization** — within each test class, if 3 or more `@Test` methods call the same method under test with the same assertion structure, differing only in input/expected literals, flag them as a group — **nit**. Recommend consolidating into one `@ParameterizedTest` with `@CsvSource`/`@MethodSource` (see Rule 3's example).
+
 ## Severity rubric
 
 - **must-fix** — wrong/misleading name vs. behavior; a name that asserts the opposite of the body; a clearly missing error-path or branch test for logic that can fail.
@@ -58,9 +69,9 @@ Return ONLY this, no preamble:
 ```
 ## junit-validator findings
 
-| file | line | method | check | severity | issue | suggested fix |
-|------|------|--------|-------|----------|-------|---------------|
-| ...  | ...  | ...    | 1/2/3 | must/should/nit | ... | ... |
+| file | line | method | check | rule | severity | issue | suggested fix |
+|------|------|--------|-------|------|----------|-------|---------------|
+| ...  | ...  | ...    | 1/2/3/4/5/6 | ... | must/should/nit | ... | ... |
 
 ### Summary
 - must-fix: <n>, should-fix: <n>, nit: <n>
@@ -68,6 +79,8 @@ Return ONLY this, no preamble:
 ```
 
 The `line` column is the line number in the test file where the finding applies (use the method's line for check 1/2; the most relevant line otherwise).
+
+The `rule` column cites the exact SKILL.md rule the finding enforces (e.g. `Rule 8, line 636` or `Core Testing Philosophy, line 41`) — never a rule number alone, always with a line reference back to the resolved SKILL.md. For every **must-fix** finding, the `issue` column must also quote the exact sentence from SKILL.md being enforced, verbatim. If you cannot point to a specific line and quote it, the finding is not valid — downgrade it or drop it rather than report a rule you cannot cite.
 
 If everything is compliant, return the header, an empty table, and a Summary of all zeros.
 
