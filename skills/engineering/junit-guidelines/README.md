@@ -209,7 +209,7 @@ Find production classes that can only be mocked, never faked, because they lack 
 
 Find "slop" tests across the codebase — tests that compile and pass but verify nothing meaningful (report only, no code changes):
 ```bash
-/junit-guidelines Using the JUnit guidelines, find "slop" tests (see this README's Slop Test example) — weak-assertion-only tests, tests that only check the stub returned what it was told to return. Report the top 10 offending test classes with a one-line reason each. Report only, no code changes.
+/junit-guidelines Using the JUnit guidelines, find "slop" tests (see this README's Slop Test example) — tests that only check the stub returned what it was told to return, weak-assertion-only tests. Report the top 10 offending test classes with a one-line reason each. Report only, no code changes.
 ```
 
 ---
@@ -236,11 +236,11 @@ public class OrderServieTest {
   void setup() {
     orderService = new OrderService(orderClient, customerService, sqsUtil);
   }
-
   @Test
   public void getOrdersOfCustomer_withValidRequest_returnsOrdersOfCustomers() {
     // Given
-    when(orderClient.getOrders(any())).thenReturn(List.of(mock(Order.class), mock(Order.class)));
+    Order expectedOrder = mock(Order.class);
+    when(orderClient.getOrders(any())).thenReturn(List.of(expectedOrder));
 
     // When
     List<Order> orderList = orderService.getOrdersOfCustomre(customerId);
@@ -248,7 +248,7 @@ public class OrderServieTest {
     // Then
     assertThat(orderList)
       .as("getOrdersOfCustomer should return exactly the orders belonging to customerId=%s", customerId)
-      .hasSize(2); // verifies the mock's arity, not real behavior
+      .containsExactly(expectedOrder); // the "expected" value is the stub itself
   }
 }
 ```
