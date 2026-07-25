@@ -100,10 +100,10 @@ Replace `/path/to/ai-tools` with the actual path where you cloned the repository
 
 **Step 3: Symlink the validator subagent**
 
-The skill's final validation step delegates to the `junit-validator` subagent, which Claude Code resolves from `~/.claude/agents/`. The subagent ships in the repo at `agents/engineering/junit-guidelines/junit-validator.md`, so link it into place:
+The skill's final validation step delegates to the `junit-validator` subagent, which Claude Code resolves from `~/.claude/agents/`. The subagent ships in the repo at `skills/engineering/junit-guidelines/agents/junit-validator.md`, so link it into place:
 
 ```bash
-ln -s /path/to/ai-tools/agents/engineering/junit-guidelines/junit-validator.md ~/.claude/agents/junit-validator.md
+ln -s /path/to/ai-tools/skills/engineering/junit-guidelines/agents/junit-validator.md ~/.claude/agents/junit-validator.md
 ```
 
 Replace `/path/to/ai-tools` with the actual path where you cloned the repository.
@@ -279,7 +279,7 @@ Tests should document what the system must do, not how it does it. When internal
 ## Files
 
 - `SKILL.md` — Skill metadata and full rule definitions with good and bad examples for each rule
-- `agents/engineering/junit-guidelines/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
+- `agents/junit-validator.md` — The read-only `junit-validator` subagent invoked by the skill's final step to validate generated tests in a fresh context and return a findings table
 
 ## References
 
